@@ -69,10 +69,22 @@
             <div class="char-pick" data-char="cat" onclick="pickChar(this)"><span class="char-icon">🐱</span><span class="char-name">Cat</span></div>
             <div class="char-pick" data-char="alien" onclick="pickChar(this)"><span class="char-icon">👽</span><span class="char-name">Alien</span></div>
         </div>
-        <button class="big-btn" id="startBtn" onclick="startMirror()">Start! 🎬</button>
+        <button class="big-btn" id="startBtn" onclick="showCameraPopup()">Start! 🎬</button>
         <p id="errorMsg"></p>
     </div>
     <a href="index.html" class="back-link">← Back to Little Learners</a>
+</div>
+
+<!-- CAMERA PERMISSION POPUP -->
+<div id="cameraPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:500; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:24px; padding:35px; max-width:400px; width:90%; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+        <div style="font-size:3.5rem; margin-bottom:12px;">📷</div>
+        <h2 style="font-size:1.4rem; color:#333; margin-bottom:10px;">Camera Access Needed</h2>
+        <p style="color:#666; line-height:1.5; margin-bottom:8px;">Your buddy needs to see you to copy your moves!</p>
+        <p style="color:#888; font-size:0.85rem; margin-bottom:20px;">🔒 We don't record or save anything. The camera is only used to detect movement on your device.</p>
+        <button class="big-btn" onclick="allowCamera()" style="margin-bottom:10px; width:100%;">Allow Camera ✅</button>
+        <button onclick="hideCameraPopup()" style="background:none; border:none; color:#888; font-size:0.95rem; cursor:pointer; padding:8px;">No thanks, go back</button>
+    </div>
 </div>
 
 <!-- MIRROR SCREEN -->
@@ -181,6 +193,18 @@ async function initPose() {
     });
 }
 
+// ========== CAMERA PERMISSION POPUP ==========
+window.showCameraPopup = function() {
+    document.getElementById('cameraPopup').style.display = 'flex';
+};
+window.hideCameraPopup = function() {
+    document.getElementById('cameraPopup').style.display = 'none';
+};
+window.allowCamera = function() {
+    document.getElementById('cameraPopup').style.display = 'none';
+    startMirror();
+};
+
 // ========== START / STOP ==========
 window.startMirror = async function() {
     try {
@@ -195,7 +219,13 @@ window.startMirror = async function() {
     } catch (err) {
         const msg = document.getElementById('errorMsg');
         msg.style.display = 'block';
-        msg.textContent = err.name === 'NotAllowedError' ? 'Camera permission denied. Please allow access.' : 'Could not start: ' + err.message;
+        if (err.name === 'NotAllowedError') {
+            msg.innerHTML = '⚠️ Camera permission was denied.<br><br><b>To fix this:</b><br>• On iPhone/iPad: Go to Settings → Safari → Camera → Allow<br>• On Android: Tap the 🔒 icon in the address bar → Permissions → Camera → Allow<br>• On desktop: Click the camera icon in the address bar and allow access<br><br>Then try again!';
+        } else if (err.name === 'NotFoundError') {
+            msg.textContent = '📷 No camera found. Please make sure your device has a camera.';
+        } else {
+            msg.textContent = '❌ Could not start camera: ' + err.message;
+        }
     }
 };
 
