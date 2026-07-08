@@ -100,6 +100,7 @@
         .game-card .icon { font-size: 4rem; margin-bottom: 10px; display: block; animation: wiggle 2s ease-in-out infinite; }
         .game-card .label { font-size: 1.3rem; font-weight: bold; color: #333; }
         .game-card .difficulty { font-size: 0.8rem; color: #888; margin-top: 5px; }
+        .game-card .hint { font-size: 0.75rem; color: #aaa; margin-top: 4px; font-style: italic; }
 
         /* Game screens */
         .game-header {
@@ -235,51 +236,61 @@
                 <span class="icon">🔢</span>
                 <span class="label">Counting</span>
                 <span class="difficulty" id="countingDiff"></span>
+                <span class="hint">Count the objects and tap the right number</span>
             </div>
             <div class="game-card" onclick="startGame('colors')" role="button" tabindex="0" aria-label="Colors game">
                 <span class="icon">🎨</span>
                 <span class="label">Colors</span>
                 <span class="difficulty" id="colorsDiff"></span>
+                <span class="hint">Look at the color and tap its name</span>
             </div>
             <div class="game-card" onclick="startGame('shapes')" role="button" tabindex="0" aria-label="Shapes game">
                 <span class="icon">⭐</span>
                 <span class="label">Shapes</span>
                 <span class="difficulty" id="shapesDiff"></span>
+                <span class="hint">See the shape and pick the right name</span>
             </div>
             <div class="game-card" onclick="startGame('memory')" role="button" tabindex="0" aria-label="Memory matching game">
                 <span class="icon">🧠</span>
                 <span class="label">Memory</span>
                 <span class="difficulty" id="memoryDiff"></span>
+                <span class="hint">Flip cards and find matching pairs</span>
             </div>
             <div class="game-card" onclick="startGame('animals')" role="button" tabindex="0" aria-label="Animals game">
                 <span class="icon">🦁</span>
                 <span class="label">Animals</span>
                 <span class="difficulty" id="animalsDiff"></span>
+                <span class="hint">Name the animal or its sound</span>
             </div>
             <div class="game-card" onclick="startGame('vehicles')" role="button" tabindex="0" aria-label="Vehicles game">
                 <span class="icon">🚗</span>
                 <span class="label">Vehicles</span>
                 <span class="difficulty" id="vehiclesDiff"></span>
+                <span class="hint">Name the vehicle or where it goes</span>
             </div>
             <div class="game-card" onclick="startGame('household')" role="button" tabindex="0" aria-label="Household items game">
                 <span class="icon">🏠</span>
                 <span class="label">Home Items</span>
                 <span class="difficulty" id="householdDiff"></span>
+                <span class="hint">Name the item or what it's used for</span>
             </div>
             <div class="game-card" onclick="startGame('math')" role="button" tabindex="0" aria-label="Math game">
                 <span class="icon">➕</span>
                 <span class="label">Math</span>
                 <span class="difficulty" id="mathDiff"></span>
+                <span class="hint">Add and take away with pictures</span>
             </div>
             <a href="draw.html" class="game-card" role="button" tabindex="0" aria-label="Learn to Draw" style="text-decoration:none;">
                 <span class="icon">✏️</span>
                 <span class="label">Learn to Draw</span>
                 <span class="difficulty">Step-by-step!</span>
+                <span class="hint">Follow along to draw cool vehicles</span>
             </a>
             <a href="mirror.html" class="game-card" role="button" tabindex="0" aria-label="Magic Mirror" style="text-decoration:none;">
                 <span class="icon">🪞</span>
                 <span class="label">Magic Mirror</span>
                 <span class="difficulty">Move & play!</span>
+                <span class="hint">A character copies your body moves</span>
             </a>
         </div>
     </div>
