@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 Little Learners Adventure 🌟</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .screen {
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            min-height: 100vh; padding: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        .screen.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+        @keyframes wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-5deg); } 75% { transform: rotate(5deg); } }
+        @keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        @keyframes starBurst { 0% { transform: scale(0) rotate(0deg); opacity: 1; } 100% { transform: scale(2) rotate(180deg); opacity: 0; } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes confettiFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+        /* Setup Screen */
+        .setup-card {
+            background: white; border-radius: 30px; padding: 40px;
+            max-width: 500px; width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); text-align: center;
+        }
+        .setup-card h2 { font-size: 1.8rem; color: #333; margin-bottom: 25px; }
+        .setup-card label { font-size: 1.1rem; color: #555; display: block; margin-bottom: 8px; text-align: left; }
+        .setup-input {
+            width: 100%; padding: 14px 18px; font-size: 1.2rem;
+            border: 3px solid #ddd; border-radius: 16px; margin-bottom: 20px;
+            outline: none; transition: border-color 0.2s;
+        }
+        .setup-input:focus { border-color: #667eea; }
+        .age-selector { display: flex; gap: 12px; justify-content: center; margin-bottom: 25px; }
+        .age-btn {
+            width: 70px; height: 70px; border-radius: 50%; border: 3px solid #ddd;
+            background: #f8f8f8; font-size: 1.5rem; font-weight: bold;
+            cursor: pointer; transition: all 0.2s; color: #333;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+        }
+        .age-btn:hover { border-color: #667eea; background: #eef0ff; transform: scale(1.05); }
+        .age-btn.selected { background: #667eea; border-color: #667eea; color: white; transform: scale(1.1); }
+        .age-btn span { font-size: 0.7rem; margin-top: 2px; }
+        .start-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2); color: white;
+            border: none; padding: 16px 50px; font-size: 1.4rem; border-radius: 50px;
+            cursor: pointer; transition: transform 0.2s; font-weight: bold;
+        }
+        .start-btn:hover { transform: scale(1.05); }
+        .start-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Home Screen */
+        .home-title {
+            font-size: clamp(2rem, 6vw, 4rem); color: #fff;
+            text-align: center; margin-bottom: 5px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+        .home-subtitle {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            color: rgba(255,255,255,0.9); margin-bottom: 10px; text-align: center;
+        }
+        .home-info {
+            background: rgba(255,255,255,0.15); border-radius: 50px;
+            padding: 8px 20px; margin-bottom: 25px; color: white; font-size: 1rem;
+            display: flex; gap: 15px; align-items: center;
+        }
+        .home-info .change-btn {
+            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5);
+            color: white; padding: 4px 12px; border-radius: 20px; cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .home-info .change-btn:hover { background: rgba(255,255,255,0.4); }
+        .game-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px; max-width: 700px; width: 100%;
+        }
+        .game-card {
+            background: white; border-radius: 24px; padding: 30px 20px;
+            text-align: center; cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .game-card:hover, .game-card:active {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+        }
+        .game-card .icon { font-size: 4rem; margin-bottom: 10px; display: block; animation: wiggle 2s ease-in-out infinite; }
+        .game-card .label { font-size: 1.3rem; font-weight: bold; color: #333; }
+        .game-card .difficulty { font-size: 0.8rem; color: #888; margin-top: 5px; }
+
+        /* Game screens */
+        .game-header {
+            width: 100%; max-width: 700px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.2); border: 2px solid white;
+            color: white; font-size: 1.1rem; padding: 10px 20px;
+            border-radius: 50px; cursor: pointer; transition: background 0.2s;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.4); }
+        .score-display {
+            background: rgba(255,255,255,0.2); border: 2px solid white;
+            color: white; font-size: 1.2rem; padding: 10px 20px; border-radius: 50px;
+        }
+        .game-area {
+            background: white; border-radius: 30px; padding: 30px;
+            max-width: 700px; width: 100%; min-height: 400px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .game-instruction {
+            font-size: clamp(1.2rem, 3vw, 1.8rem); color: #333;
+            text-align: center; margin-bottom: 30px; font-weight: bold;
+        }
+        .counting-objects { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 30px; }
+        .counting-objects .object { font-size: 3rem; animation: pop 0.4s ease backwards; }
+        .number-choices { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+        .number-btn {
+            width: 70px; height: 70px; border-radius: 50%; border: 3px solid #ddd;
+            background: #f8f8f8; font-size: 2rem; font-weight: bold;
+            cursor: pointer; transition: all 0.2s; color: #333;
+        }
+        .number-btn:hover { border-color: #667eea; background: #eef0ff; transform: scale(1.1); }
+        .number-btn.correct { background: #4CAF50; border-color: #4CAF50; color: white; animation: bounce 0.5s; }
+        .number-btn.wrong { background: #ff6b6b; border-color: #ff6b6b; color: white; animation: wiggle 0.5s; }
+
+        .color-target {
+            width: 120px; height: 120px; border-radius: 50%; margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); animation: bounce 1.5s ease-in-out infinite;
+        }
+        .color-choices { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+        .color-btn {
+            padding: 15px 30px; border-radius: 50px; border: 3px solid #ddd;
+            background: white; font-size: 1.3rem; font-weight: bold;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .color-btn:hover { transform: scale(1.1); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .color-btn.correct { border-color: #4CAF50; background: #e8f5e9; animation: bounce 0.5s; }
+        .color-btn.wrong { border-color: #ff6b6b; background: #ffebee; animation: wiggle 0.5s; }
+        .shape-display { font-size: 6rem; margin-bottom: 30px; animation: float 2s ease-in-out infinite; }
+        .shape-choices { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+        .shape-btn {
+            padding: 15px 25px; border-radius: 16px; border: 3px solid #ddd;
+            background: white; font-size: 1.2rem; font-weight: bold;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .shape-btn:hover { transform: scale(1.1); border-color: #764ba2; }
+        .shape-btn.correct { border-color: #4CAF50; background: #e8f5e9; animation: bounce 0.5s; }
+        .shape-btn.wrong { border-color: #ff6b6b; background: #ffebee; animation: wiggle 0.5s; }
+        .memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 380px; width: 100%; }
+        .memory-card {
+            aspect-ratio: 1; border-radius: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.2rem; cursor: pointer; transition: transform 0.3s; border: 3px solid #ddd;
+        }
+        .memory-card.flipped { background: white; }
+        .memory-card:not(.flipped) .card-face { display: none; }
+        .memory-card:not(.flipped)::after { content: '❓'; font-size: 2rem; }
+        .memory-card.matched { background: #e8f5e9; border-color: #4CAF50; pointer-events: none; }
+
+        .feedback {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 5rem; pointer-events: none; z-index: 1000; animation: starBurst 1s ease forwards;
+        }
+        .next-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2); color: white;
+            border: none; padding: 15px 40px; font-size: 1.3rem; border-radius: 50px;
+            cursor: pointer; transition: transform 0.2s; font-weight: bold; margin-top: 20px;
+        }
+        .next-btn:hover { transform: scale(1.05); }
+        .level-msg { font-size: 1.5rem; color: #333; margin-bottom: 10px; font-weight: bold; }
+        .level-stars { font-size: 3rem; margin-bottom: 10px; }
+        .sound-toggle {
+            position: fixed; top: 15px; right: 15px;
+            background: rgba(255,255,255,0.2); border: 2px solid white;
+            color: white; font-size: 1.5rem; width: 50px; height: 50px;
+            border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+        }
+        @media (max-width: 500px) {
+            .game-area { padding: 20px; }
+            .memory-grid { grid-template-columns: repeat(3, 1fr); }
+            .number-btn { width: 60px; height: 60px; font-size: 1.5rem; }
+            .age-btn { width: 60px; height: 60px; }
+            .setup-card { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="sound-toggle" id="soundToggle" aria-label="Toggle sound">🔊</button>
+
+    <!-- SETUP SCREEN -->
+    <div class="screen active" id="setupScreen">
+        <h1 class="home-title">🌟 Little Learners 🌟</h1>
+        <p class="home-subtitle" style="margin-bottom:20px;">Let's get started!</p>
+        <div class="setup-card">
+            <h2>👋 Welcome!</h2>
+            <label for="playerName">Child's Name</label>
+            <input class="setup-input" id="playerName" type="text" placeholder="Enter name here..." maxlength="20" autocomplete="off">
+            <label>Age</label>
+            <div class="age-selector">
+                <button class="age-btn" onclick="selectAge(3)" id="age3">3<span>years</span></button>
+                <button class="age-btn" onclick="selectAge(4)" id="age4">4<span>years</span></button>
+                <button class="age-btn" onclick="selectAge(5)" id="age5">5<span>years</span></button>
+            </div>
+            <button class="start-btn" id="startBtn" onclick="beginGame()" disabled>Let's Play! 🎉</button>
+        </div>
+    </div>
+
+    <!-- HOME SCREEN -->
+    <div class="screen" id="homeScreen">
+        <h1 class="home-title">🌟 Little Learners 🌟</h1>
+        <p class="home-subtitle" id="welcomeMsg">Pick a game to play!</p>
+        <div class="home-info" id="playerInfo">
+            <span id="playerInfoText"></span>
+            <button class="change-btn" onclick="showScreen('setupScreen')">Change</button>
+        </div>
+        <div class="game-grid">
+            <div class="game-card" onclick="startGame('counting')" role="button" tabindex="0" aria-label="Counting game">
+                <span class="icon">🔢</span>
+                <span class="label">Counting</span>
+                <span class="difficulty" id="countingDiff"></span>
+            </div>
+            <div class="game-card" onclick="startGame('colors')" role="button" tabindex="0" aria-label="Colors game">
+                <span class="icon">🎨</span>
+                <span class="label">Colors</span>
+                <span class="difficulty" id="colorsDiff"></span>
+            </div>
+            <div class="game-card" onclick="startGame('shapes')" role="button" tabindex="0" aria-label="Shapes game">
+                <span class="icon">⭐</span>
+                <span class="label">Shapes</span>
+                <span class="difficulty" id="shapesDiff"></span>
+            </div>
+            <div class="game-card" onclick="startGame('memory')" role="button" tabindex="0" aria-label="Memory matching game">
+                <span class="icon">🧠</span>
+                <span class="label">Memory</span>
+                <span class="difficulty" id="memoryDiff"></span>
+            </div>
+            <div class="game-card" onclick="startGame('animals')" role="button" tabindex="0" aria-label="Animals game">
+                <span class="icon">🦁</span>
+                <span class="label">Animals</span>
+                <span class="difficulty" id="animalsDiff"></span>
+            </div>
+            <div class="game-card" onclick="startGame('vehicles')" role="button" tabindex="0" aria-label="Vehicles game">
+                <span class="icon">🚗</span>
+                <span class="label">Vehicles</span>
+                <span class="difficulty" id="vehiclesDiff"></span>
+            </div>
+            <div class="game-card" onclick="startGame('household')" role="button" tabindex="0" aria-label="Household items game">
+                <span class="icon">🏠</span>
+                <span class="label">Home Items</span>
+                <span class="difficulty" id="householdDiff"></span>
+            </div>
+            <a href="draw.html" class="game-card" role="button" tabindex="0" aria-label="Learn to Draw" style="text-decoration:none;">
+                <span class="icon">✏️</span>
+                <span class="label">Learn to Draw</span>
+                <span class="difficulty">Step-by-step!</span>
+            </a>
+            <a href="mirror.html" class="game-card" role="button" tabindex="0" aria-label="Magic Mirror" style="text-decoration:none;">
+                <span class="icon">🪞</span>
+                <span class="label">Magic Mirror</span>
+                <span class="difficulty">Move & play!</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- COUNTING GAME -->
+    <div class="screen" id="countingScreen">
+        <div class="game-header">
+            <button class="back-btn" onclick="goHome()">🏠 Home</button>
+            <div class="score-display" id="countingScore">⭐ 0</div>
+        </div>
+        <div class="game-area" id="countingArea"></div>
+    </div>
+
+    <!-- COLORS GAME -->
+    <div class="screen" id="colorsScreen">
+        <div class="game-header">
+            <button class="back-btn" onclick="goHome()">🏠 Home</button>
+            <div class="score-display" id="colorsScore">⭐ 0</div>
+        </div>
+        <div class="game-area" id="colorsArea"></div>
+    </div>
+
+    <!-- SHAPES GAME -->
+    <div class="screen" id="shapesScreen">
+        <div class="game-header">
+            <button class="back-btn" onclick="goHome()">🏠 Home</button>
+            <div class="score-display" id="shapesScore">⭐ 0</div>
+        </div>
+        <div class="game-area" id="shapesArea"></div>
+    </div>
+
+    <!-- MEMORY GAME -->
+    <div class="screen" id="memoryScreen">
+        <div class="game-header">
+            <button class="back-btn" onclick="goHome()">🏠 Home</button>
+            <div class="score-display" id="memoryScore">⭐ 0</div>
+        </div>
+        <div class="game-area" id="memoryArea"></div>
+    </div>
+
+    <!-- ANIMALS GAME -->
+    <div class="screen" id="animalsScreen">
+        <div class="game-header">
+            <button class="back-btn" onclick="goHome()">🏠 Home</button>
+            <div class="score-display" id="animalsScore">⭐ 0</div>
+        </div>
+        <div class="game-area" id="animalsArea"></div>
+    </div>
+
+    <!-- VEHICLES GAME -->
+    <div class="screen" id="vehiclesScreen">
+        <div class="game-header">
+            <button class="back-btn" onclick="goHome()">🏠 Home</button>
+            <div class="score-display" id="vehiclesScore">⭐ 0</div>
+        </div>
+        <div class="game-area" id="vehiclesArea"></div>
+    </div>
+
+    <!-- HOUSEHOLD ITEMS GAME -->
+    <div class="screen" id="householdScreen">
+        <div class="game-header">
+            <button class="back-btn" onclick="goHome()">🏠 Home</button>
+            <div class="score-display" id="householdScore">⭐ 0</div>
+        </div>
+        <div class="game-area" id="householdArea"></div>
+    </div>
+
+    <script>
+        // ========== GAME STATE ==========
+        let playerName = '';
+        let playerAge = 0;
+        let scores = { counting: 0, colors: 0, shapes: 0, memory: 0, animals: 0, vehicles: 0, household: 0 };
+        let round = 0;
+        let ROUNDS_PER_GAME = 5;
+        let soundEnabled = true;
+        let memoryCards = [];
+        let flippedCards = [];
+        let memoryLocked = false;
+        let streak = 0;
+
+        // ========== SETUP ==========
+        function selectAge(age) {
+            playerAge = age;
+            document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('selected'));
+            document.getElementById('age' + age).classList.add('selected');
+            checkReady();
+        }
+
+        document.getElementById('playerName').addEventListener('input', checkReady);
+
+        function checkReady() {
+            const name = document.getElementById('playerName').value.trim();
+            document.getElementById('startBtn').disabled = !(name.length > 0 && playerAge > 0);
+        }
+
+        function beginGame() {
+            playerName = document.getElementById('playerName').value.trim();
+            updateDifficultyLabels();
+            document.getElementById('welcomeMsg').textContent = `Hi ${playerName}! Pick a game 🎮`;
+            document.getElementById('playerInfoText').textContent = `👤 ${playerName} · Age ${playerAge}`;
+            showScreen('homeScreen');
+            sayText(`Hi ${playerName}! Let's play!`);
+        }
+
+        function updateDifficultyLabels() {
+            const labels = getDifficultyInfo();
+            document.getElementById('countingDiff').textContent = labels.counting;
+            document.getElementById('colorsDiff').textContent = labels.colors;
+            document.getElementById('shapesDiff').textContent = labels.shapes;
+            document.getElementById('memoryDiff').textContent = labels.memory;
+            document.getElementById('animalsDiff').textContent = labels.animals;
+            document.getElementById('vehiclesDiff').textContent = labels.vehicles;
+            document.getElementById('householdDiff').textContent = labels.household;
+        }
+
+        function getDifficultyInfo() {
+            if (playerAge === 3) return { counting: 'Count 1-3', colors: '4 colors', shapes: '3 shapes', memory: '3 pairs', animals: '4 animals', vehicles: '4 vehicles', household: '4 items' };
+            if (playerAge === 4) return { counting: 'Count 1-5', colors: '5 colors', shapes: '4 shapes', memory: '4 pairs', animals: '6 animals', vehicles: '6 vehicles', household: '6 items' };
+            return { counting: 'Count 1-8', colors: '7 colors', shapes: '6 shapes', memory: '6 pairs', animals: '8 animals', vehicles: '8 vehicles', household: '8 items' };
+        }
+
+        // ========== AUDIO ==========
+        let audioCtx;
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            try { audioCtx.resume(); } catch(e) {}
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            gain.gain.value = 0.3;
+
+            if (type === 'correct') {
+                osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'wrong') {
+                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'win') {
+                osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.15);
+                osc.frequency.setValueAtTime(784, audioCtx.currentTime + 0.3);
+                osc.frequency.setValueAtTime(1047, audioCtx.currentTime + 0.45);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.7);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.7);
+            }
+        }
+
+        // ========== SPEECH (says "Good job, <name>!") ==========
+        function sayText(text) {
+            if (!soundEnabled) return;
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.rate = 0.85;
+            utter.pitch = 1.1;
+            utter.volume = 0.9;
+            // Pick the gentlest, most soothing voice available
+            const voices = window.speechSynthesis.getVoices();
+            const preferred = [
+                'Microsoft Zira',     // Windows - soft female
+                'Samantha',           // macOS - friendly female
+                'Google UK English Female',
+                'Karen',              // macOS AU
+                'Moira',              // macOS IE - gentle
+                'Tessa',              // macOS ZA
+                'Google US English',
+                'Female',
+            ];
+            let chosen = null;
+            for (const pref of preferred) {
+                chosen = voices.find(v => v.name.includes(pref));
+                if (chosen) break;
+            }
+            // Fallback: pick any voice with "female" in its name or a non-default one
+            if (!chosen) chosen = voices.find(v => /female|woman/i.test(v.name));
+            if (chosen) utter.voice = chosen;
+            window.speechSynthesis.speak(utter);
+        }
+
+        function sayGoodJob() {
+            streak++;
+            let phrases;
+            if (streak >= 4) {
+                // Big streak! Extra excitement
+                phrases = [
+                    `Incredible ${playerName}! ${streak} in a row!`,
+                    `Unstoppable ${playerName}! You're on fire!`,
+                    `${playerName} you're a genius! ${streak} correct!`,
+                    `Wow wow wow ${playerName}! Amazing streak!`,
+                    `${playerName} is on a roll! Keep going!`,
+                ];
+            } else if (streak >= 2) {
+                // Building momentum
+                phrases = [
+                    `Good job ${playerName}! You're on a streak!`,
+                    `Another one right ${playerName}! Keep it up!`,
+                    `${playerName} is getting so good at this!`,
+                    `Look at you learning ${playerName}! So proud!`,
+                    `Yes ${playerName}! You're really getting it!`,
+                ];
+            } else {
+                phrases = [
+                    `Good job ${playerName}!`,
+                    `Well done ${playerName}!`,
+                    `Awesome ${playerName}!`,
+                    `You're so smart ${playerName}!`,
+                    `Great work ${playerName}!`,
+                    `Yay ${playerName}!`,
+                    `You're doing amazing ${playerName}!`,
+                    `Look at you go ${playerName}!`,
+                    `${playerName} you're a superstar!`,
+                    `That's right ${playerName}! You're learning so fast!`,
+                    `Wow ${playerName}! You're getting better and better!`,
+                    `${playerName} you figured it out!`,
+                ];
+            }
+            sayText(phrases[Math.floor(Math.random() * phrases.length)]);
+        }
+
+        function sayTryAgain() {
+            streak = 0;
+            const phrases = [
+                `Almost ${playerName}! Try again!`,
+                `That's okay ${playerName}, you can do it!`,
+                `Not quite, but you're so close ${playerName}!`,
+                `Keep trying ${playerName}, you're doing great!`,
+                `Oops! No worries ${playerName}, try another one!`,
+                `You're learning ${playerName}! Give it another go!`,
+                `That's okay! Every try makes you smarter ${playerName}!`,
+                `Don't give up ${playerName}! You've got this!`,
+                `Hmm, not that one. But you're so brave for trying ${playerName}!`,
+                `It's okay to make mistakes ${playerName}! That's how we learn!`,
+            ];
+            sayText(phrases[Math.floor(Math.random() * phrases.length)]);
+        }
+
+        document.getElementById('soundToggle').onclick = () => {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+            if (!soundEnabled) window.speechSynthesis.cancel();
+        };
+
+        // Preload voices
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.getVoices();
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
+
+        // ========== NAVIGATION ==========
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function goHome() { showScreen('homeScreen'); }
+
+        function startGame(game) {
+            scores[game] = 0;
+            round = 0;
+            ROUNDS_PER_GAME = playerAge === 3 ? 4 : (playerAge === 4 ? 5 : 6);
+            updateScore(game);
+            showScreen(game + 'Screen');
+            nextRound(game);
+        }
+
+        function updateScore(game) {
+            document.getElementById(game + 'Score').textContent = '⭐ ' + scores[game];
+        }
+
+        // ========== FEEDBACK ==========
+        function showFeedback(correct) {
+            const fb = document.createElement('div');
+            fb.className = 'feedback';
+            fb.textContent = correct ? '⭐' : '❌';
+            document.body.appendChild(fb);
+            setTimeout(() => fb.remove(), 1000);
+        }
+
+        function showConfetti() {
+            const colors = ['#ff6b6b','#ffd93d','#6bcf7f','#4ecdc4','#667eea','#764ba2','#ff9a9e'];
+            for (let i = 0; i < 30; i++) {
+                const c = document.createElement('div');
+                c.style.cssText = `
+                    position:fixed; width:12px; height:12px; border-radius:50%;
+                    background:${colors[Math.floor(Math.random()*colors.length)]};
+                    left:${Math.random()*100}vw; top:-20px;
+                    pointer-events:none; z-index:999;
+                    animation: confettiFall ${1.5+Math.random()}s ease-out forwards;
+                    animation-delay: ${Math.random()*0.5}s;
+                `;
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }
+        }
+
+        function showLevelComplete(game) {
+            playSound('win');
+            showConfetti();
+            const total = ROUNDS_PER_GAME;
+            const got = scores[game];
+            let msg, speech;
+            if (got === total) {
+                msg = `Perfect score ${playerName}! You got all ${got} stars! 🏆`;
+                speech = `Perfect score ${playerName}! You got every single one right! You're amazing!`;
+            } else if (got >= total * 0.7) {
+                msg = `Great job ${playerName}! You got ${got} out of ${total} stars!`;
+                speech = `Great job ${playerName}! You got ${got} stars! You're learning so much!`;
+            } else {
+                msg = `Good try ${playerName}! You got ${got} stars! Keep practicing!`;
+                speech = `Good try ${playerName}! You got ${got} stars! Every time you play, you get better!`;
+            }
+            sayText(speech);
+            const area = document.getElementById(game + 'Area');
+            area.innerHTML = `
+                <div class="level-stars">${got === total ? '🏆🌟🏆' : '🌟🌟🌟'}</div>
+                <div class="level-msg">${msg}</div>
+                <button class="next-btn" onclick="startGame('${game}')">Play Again! 🎮</button>
+                <button class="next-btn" onclick="goHome()" style="background:#4CAF50;">🏠 Home</button>
+            `;
+        }
+
+        function nextRound(game) {
+            round++;
+            if (round > ROUNDS_PER_GAME) { showLevelComplete(game); return; }
+            if (game === 'counting') setupCounting();
+            else if (game === 'colors') setupColors();
+            else if (game === 'shapes') setupShapes();
+            else if (game === 'memory') setupMemory();
+            else if (game === 'animals') setupAnimals();
+            else if (game === 'vehicles') setupVehicles();
+            else if (game === 'household') setupHousehold();
+        }
+
+        // ========== COUNTING GAME (age-scaled) ==========
+        function setupCounting() {
+            const emojis = ['🍎','🍌','🐱','🐶','🌺','🦋','🐟','🍓','🌈','🎈'];
+            // Age 3: count 1-3, Age 4: count 1-5, Age 5: count 1-8
+            const maxCount = playerAge === 3 ? 3 : (playerAge === 4 ? 5 : 8);
+            const count = Math.floor(Math.random() * maxCount) + 1;
+            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+            const area = document.getElementById('countingArea');
+
+            let objectsHTML = '';
+            for (let i = 0; i < count; i++) {
+                objectsHTML += `<span class="object" style="animation-delay:${i*0.1}s">${emoji}</span>`;
+            }
+
+            // Number of choices: age 3 = 3 choices, age 4 = 4, age 5 = 5
+            const numChoices = playerAge === 3 ? 3 : (playerAge === 4 ? 4 : 5);
+            let choices = [count];
+            while (choices.length < numChoices) {
+                const n = Math.floor(Math.random() * maxCount) + 1;
+                if (!choices.includes(n)) choices.push(n);
+            }
+            choices.sort(() => Math.random() - 0.5);
+
+            let choicesHTML = choices.map(n =>
+                `<button class="number-btn" onclick="checkCounting(this, ${n}, ${count})">${n}</button>`
+            ).join('');
+
+            area.innerHTML = `
+                <div class="game-instruction">How many ${emoji} do you see?</div>
+                <div class="counting-objects">${objectsHTML}</div>
+                <div class="number-choices">${choicesHTML}</div>
+            `;
+        }
+
+        function checkCounting(btn, chosen, correct) {
+            if (btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+            if (chosen === correct) {
+                btn.classList.add('correct');
+                scores.counting++;
+                updateScore('counting');
+                playSound('correct');
+                showFeedback(true);
+                sayGoodJob();
+                setTimeout(() => nextRound('counting'), 1500);
+            } else {
+                btn.classList.add('wrong');
+                playSound('wrong');
+                showFeedback(false);
+                sayTryAgain();
+                setTimeout(() => btn.classList.remove('wrong'), 600);
+            }
+        }
+
+        // ========== COLORS GAME (age-scaled) ==========
+        const allColors = [
+            { name: 'Red', hex: '#ff4444' },
+            { name: 'Blue', hex: '#4488ff' },
+            { name: 'Green', hex: '#44bb44' },
+            { name: 'Yellow', hex: '#ffcc00' },
+            { name: 'Purple', hex: '#9944cc' },
+            { name: 'Orange', hex: '#ff8800' },
+            { name: 'Pink', hex: '#ff66aa' },
+        ];
+
+        function setupColors() {
+            // Age 3: 4 colors, Age 4: 5 colors, Age 5: all 7
+            const colorPool = playerAge === 3 ? allColors.slice(0, 4) : (playerAge === 4 ? allColors.slice(0, 5) : allColors);
+            const target = colorPool[Math.floor(Math.random() * colorPool.length)];
+            const numChoices = playerAge === 3 ? 3 : 4;
+            let choices = [target];
+            while (choices.length < numChoices) {
+                const c = colorPool[Math.floor(Math.random() * colorPool.length)];
+                if (!choices.find(x => x.name === c.name)) choices.push(c);
+            }
+            choices.sort(() => Math.random() - 0.5);
+
+            const area = document.getElementById('colorsArea');
+            let choicesHTML = choices.map(c =>
+                `<button class="color-btn" onclick="checkColor(this, '${c.name}', '${target.name}')">${c.name}</button>`
+            ).join('');
+
+            area.innerHTML = `
+                <div class="game-instruction">What color is this?</div>
+                <div class="color-target" style="background:${target.hex}"></div>
+                <div class="color-choices">${choicesHTML}</div>
+            `;
+        }
+
+        function checkColor(btn, chosen, correct) {
+            if (btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+            if (chosen === correct) {
+                btn.classList.add('correct');
+                scores.colors++;
+                updateScore('colors');
+                playSound('correct');
+                showFeedback(true);
+                sayGoodJob();
+                setTimeout(() => nextRound('colors'), 1500);
+            } else {
+                btn.classList.add('wrong');
+                playSound('wrong');
+                showFeedback(false);
+                sayTryAgain();
+                setTimeout(() => btn.classList.remove('wrong'), 600);
+            }
+        }
+
+        // ========== SHAPES GAME (age-scaled) ==========
+        const allShapes = [
+            { name: 'Circle', emoji: '🔴' },
+            { name: 'Square', emoji: '🟧' },
+            { name: 'Triangle', emoji: '🔺' },
+            { name: 'Star', emoji: '⭐' },
+            { name: 'Heart', emoji: '❤️' },
+            { name: 'Diamond', emoji: '💎' },
+        ];
+
+        function setupShapes() {
+            // Age 3: 3 shapes, Age 4: 4 shapes, Age 5: all 6
+            const shapePool = playerAge === 3 ? allShapes.slice(0, 3) : (playerAge === 4 ? allShapes.slice(0, 4) : allShapes);
+            const target = shapePool[Math.floor(Math.random() * shapePool.length)];
+            const numChoices = playerAge === 3 ? 3 : 4;
+            let choices = [target];
+            while (choices.length < numChoices) {
+                const s = shapePool[Math.floor(Math.random() * shapePool.length)];
+                if (!choices.find(x => x.name === s.name)) choices.push(s);
+            }
+            choices.sort(() => Math.random() - 0.5);
+
+            const area = document.getElementById('shapesArea');
+            let choicesHTML = choices.map(s =>
+                `<button class="shape-btn" onclick="checkShape(this, '${s.name}', '${target.name}')">${s.name}</button>`
+            ).join('');
+
+            area.innerHTML = `
+                <div class="game-instruction">What shape is this?</div>
+                <div class="shape-display">${target.emoji}</div>
+                <div class="shape-choices">${choicesHTML}</div>
+            `;
+        }
+
+        function checkShape(btn, chosen, correct) {
+            if (btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+            if (chosen === correct) {
+                btn.classList.add('correct');
+                scores.shapes++;
+                updateScore('shapes');
+                playSound('correct');
+                showFeedback(true);
+                sayGoodJob();
+                setTimeout(() => nextRound('shapes'), 1500);
+            } else {
+                btn.classList.add('wrong');
+                playSound('wrong');
+                showFeedback(false);
+                sayTryAgain();
+                setTimeout(() => btn.classList.remove('wrong'), 600);
+            }
+        }
+
+        // ========== MEMORY GAME (age-scaled) ==========
+        function setupMemory() {
+            const allEmojis = ['🐱','🐶','🐰','🐸','🦊','🐼','🐨','🦁','🐷','🐮'];
+            // Age 3: 3 pairs (6 cards), Age 4: 4 pairs (8 cards), Age 5: 6 pairs (12 cards)
+            const pairCount = playerAge === 3 ? 3 : (playerAge === 4 ? 4 : 6);
+            const selected = allEmojis.sort(() => Math.random() - 0.5).slice(0, pairCount);
+            memoryCards = [...selected, ...selected].sort(() => Math.random() - 0.5);
+            flippedCards = [];
+            memoryLocked = false;
+
+            const area = document.getElementById('memoryArea');
+            const cols = playerAge === 5 ? 4 : (pairCount === 3 ? 3 : 4);
+            let gridHTML = memoryCards.map((emoji, i) =>
+                `<div class="memory-card" onclick="flipCard(this, ${i})" data-index="${i}" data-emoji="${emoji}">
+                    <span class="card-face">${emoji}</span>
+                </div>`
+            ).join('');
+
+            area.innerHTML = `
+                <div class="game-instruction">Find the matching pairs!</div>
+                <div class="memory-grid" style="grid-template-columns: repeat(${cols}, 1fr)">${gridHTML}</div>
+            `;
+        }
+
+        function flipCard(card, index) {
+            if (memoryLocked) return;
+            if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+            card.classList.add('flipped');
+            flippedCards.push({ card, index, emoji: memoryCards[index] });
+
+            if (flippedCards.length === 2) {
+                memoryLocked = true;
+                const [a, b] = flippedCards;
+
+                if (a.emoji === b.emoji) {
+                    setTimeout(() => {
+                        a.card.classList.add('matched');
+                        b.card.classList.add('matched');
+                        scores.memory++;
+                        updateScore('memory');
+                        playSound('correct');
+                        showFeedback(true);
+                        sayGoodJob();
+                        flippedCards = [];
+                        memoryLocked = false;
+
+                        const allMatched = document.querySelectorAll('#memoryArea .memory-card.matched');
+                        if (allMatched.length === memoryCards.length) {
+                            setTimeout(() => showLevelComplete('memory'), 800);
+                        }
+                    }, 500);
+                } else {
+                    playSound('wrong');
+                    sayTryAgain();
+                    setTimeout(() => {
+                        a.card.classList.remove('flipped');
+                        b.card.classList.remove('flipped');
+                        flippedCards = [];
+                        memoryLocked = false;
+                    }, 1000);
+                }
+            }
+        }
+
+        // ========== ANIMALS GAME (age-scaled) ==========
+        const allAnimals = [
+            { name: 'Cat', emoji: '🐱', sound: 'Meow' },
+            { name: 'Dog', emoji: '🐶', sound: 'Woof' },
+            { name: 'Cow', emoji: '🐮', sound: 'Moo' },
+            { name: 'Duck', emoji: '🦆', sound: 'Quack' },
+            { name: 'Lion', emoji: '🦁', sound: 'Roar' },
+            { name: 'Frog', emoji: '🐸', sound: 'Ribbit' },
+            { name: 'Elephant', emoji: '🐘', sound: 'Trumpet' },
+            { name: 'Monkey', emoji: '🐵', sound: 'Ooh ooh' },
+            { name: 'Pig', emoji: '🐷', sound: 'Oink' },
+            { name: 'Bird', emoji: '🐦', sound: 'Tweet' },
+        ];
+
+        function setupAnimals() {
+            const poolSize = playerAge === 3 ? 4 : (playerAge === 4 ? 6 : 8);
+            const animalPool = allAnimals.slice(0, poolSize);
+            const target = animalPool[Math.floor(Math.random() * animalPool.length)];
+            const numChoices = playerAge === 3 ? 3 : 4;
+            let choices = [target];
+            while (choices.length < numChoices) {
+                const a = animalPool[Math.floor(Math.random() * animalPool.length)];
+                if (!choices.find(x => x.name === a.name)) choices.push(a);
+            }
+            choices.sort(() => Math.random() - 0.5);
+
+            // Randomly pick question type: identify by emoji OR by sound
+            const questionType = Math.random() > 0.5 ? 'emoji' : 'sound';
+            const area = document.getElementById('animalsArea');
+            let choicesHTML = choices.map(a =>
+                `<button class="shape-btn" onclick="checkAnimal(this, '${a.name}', '${target.name}')">${a.name}</button>`
+            ).join('');
+
+            if (questionType === 'emoji') {
+                area.innerHTML = `
+                    <div class="game-instruction">What animal is this?</div>
+                    <div class="shape-display">${target.emoji}</div>
+                    <div class="shape-choices">${choicesHTML}</div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <div class="game-instruction">Which animal says "${target.sound}"?</div>
+                    <div class="shape-display" style="font-size:3rem;">🔊 "${target.sound}"</div>
+                    <div class="shape-choices">${choicesHTML}</div>
+                `;
+                sayText(`Which animal says ${target.sound}?`);
+            }
+        }
+
+        function checkAnimal(btn, chosen, correct) {
+            if (btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+            if (chosen === correct) {
+                btn.classList.add('correct');
+                scores.animals++;
+                updateScore('animals');
+                playSound('correct');
+                showFeedback(true);
+                sayGoodJob();
+                setTimeout(() => nextRound('animals'), 1500);
+            } else {
+                btn.classList.add('wrong');
+                playSound('wrong');
+                showFeedback(false);
+                sayTryAgain();
+                setTimeout(() => btn.classList.remove('wrong'), 600);
+            }
+        }
+
+        // ========== VEHICLES GAME (age-scaled) ==========
+        const allVehicles = [
+            { name: 'Car', emoji: '🚗', goes: 'On roads' },
+            { name: 'Bus', emoji: '🚌', goes: 'On roads' },
+            { name: 'Train', emoji: '🚂', goes: 'On tracks' },
+            { name: 'Airplane', emoji: '✈️', goes: 'In the sky' },
+            { name: 'Boat', emoji: '⛵', goes: 'On water' },
+            { name: 'Bicycle', emoji: '🚲', goes: 'On roads' },
+            { name: 'Helicopter', emoji: '🚁', goes: 'In the sky' },
+            { name: 'Rocket', emoji: '🚀', goes: 'To space' },
+            { name: 'Fire Truck', emoji: '🚒', goes: 'On roads' },
+            { name: 'Ambulance', emoji: '🚑', goes: 'On roads' },
+        ];
+
+        const allPlaces = ['On roads', 'On tracks', 'In the sky', 'On water', 'To space'];
+
+        function setupVehicles() {
+            const poolSize = playerAge === 3 ? 4 : (playerAge === 4 ? 6 : 8);
+            const vehiclePool = allVehicles.slice(0, poolSize);
+            const target = vehiclePool[Math.floor(Math.random() * vehiclePool.length)];
+            const numChoices = playerAge === 3 ? 3 : 4;
+
+            // Randomly: identify vehicle by emoji OR "where does this vehicle go?"
+            const questionType = Math.random() > 0.4 ? 'emoji' : 'where';
+            const area = document.getElementById('vehiclesArea');
+
+            if (questionType === 'emoji') {
+                let choices = [target];
+                while (choices.length < numChoices) {
+                    const v = vehiclePool[Math.floor(Math.random() * vehiclePool.length)];
+                    if (!choices.find(x => x.name === v.name)) choices.push(v);
+                }
+                choices.sort(() => Math.random() - 0.5);
+                let choicesHTML = choices.map(v =>
+                    `<button class="shape-btn" onclick="checkVehicle(this, '${v.name}', '${target.name}')">${v.name}</button>`
+                ).join('');
+                area.innerHTML = `
+                    <div class="game-instruction">What vehicle is this?</div>
+                    <div class="shape-display">${target.emoji}</div>
+                    <div class="shape-choices">${choicesHTML}</div>
+                `;
+            } else {
+                // "Where does [vehicle] go?" — show the vehicle, pick from locations
+                let placeChoices = [target.goes];
+                while (placeChoices.length < numChoices) {
+                    const p = allPlaces[Math.floor(Math.random() * allPlaces.length)];
+                    if (!placeChoices.includes(p)) placeChoices.push(p);
+                }
+                placeChoices.sort(() => Math.random() - 0.5);
+                let choicesHTML = placeChoices.map(p =>
+                    `<button class="shape-btn" onclick="checkVehicle(this, '${p}', '${target.goes}')">${p}</button>`
+                ).join('');
+                area.innerHTML = `
+                    <div class="game-instruction">Where does the ${target.emoji} ${target.name} go?</div>
+                    <div class="shape-choices">${choicesHTML}</div>
+                `;
+            }
+        }
+
+        function checkVehicle(btn, chosen, correct) {
+            if (btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+            if (chosen === correct) {
+                btn.classList.add('correct');
+                scores.vehicles++;
+                updateScore('vehicles');
+                playSound('correct');
+                showFeedback(true);
+                sayGoodJob();
+                setTimeout(() => nextRound('vehicles'), 1500);
+            } else {
+                btn.classList.add('wrong');
+                playSound('wrong');
+                showFeedback(false);
+                sayTryAgain();
+                setTimeout(() => btn.classList.remove('wrong'), 600);
+            }
+        }
+
+        // ========== HOUSEHOLD ITEMS GAME (age-scaled) ==========
+        const allHousehold = [
+            { name: 'Spoon', emoji: '🥄', use: 'eating' },
+            { name: 'Cup', emoji: '🥤', use: 'drinking' },
+            { name: 'Bed', emoji: '🛏️', use: 'sleeping' },
+            { name: 'Chair', emoji: '🪑', use: 'sitting' },
+            { name: 'Lamp', emoji: '💡', use: 'giving light' },
+            { name: 'Broom', emoji: '🧹', use: 'cleaning' },
+            { name: 'Clock', emoji: '🕐', use: 'telling time' },
+            { name: 'Key', emoji: '🔑', use: 'opening doors' },
+            { name: 'Scissors', emoji: '✂️', use: 'cutting' },
+            { name: 'Soap', emoji: '🧼', use: 'washing hands' },
+        ];
+
+        function setupHousehold() {
+            const poolSize = playerAge === 3 ? 4 : (playerAge === 4 ? 6 : 8);
+            const itemPool = allHousehold.slice(0, poolSize);
+            const target = itemPool[Math.floor(Math.random() * itemPool.length)];
+            const numChoices = playerAge === 3 ? 3 : 4;
+
+            // Randomly: identify by emoji OR "what do we use this for?"
+            const questionType = Math.random() > 0.4 ? 'emoji' : 'use';
+            const area = document.getElementById('householdArea');
+
+            if (questionType === 'emoji') {
+                let choices = [target];
+                while (choices.length < numChoices) {
+                    const h = itemPool[Math.floor(Math.random() * itemPool.length)];
+                    if (!choices.find(x => x.name === h.name)) choices.push(h);
+                }
+                choices.sort(() => Math.random() - 0.5);
+                let choicesHTML = choices.map(h =>
+                    `<button class="shape-btn" onclick="checkHousehold(this, '${h.name}', '${target.name}')">${h.name}</button>`
+                ).join('');
+                area.innerHTML = `
+                    <div class="game-instruction">What is this?</div>
+                    <div class="shape-display">${target.emoji}</div>
+                    <div class="shape-choices">${choicesHTML}</div>
+                `;
+            } else {
+                // "What do we use [item] for?" — show item, pick from uses
+                const allUses = [...new Set(allHousehold.map(h => h.use))];
+                let useChoices = [target.use];
+                while (useChoices.length < numChoices) {
+                    const u = allUses[Math.floor(Math.random() * allUses.length)];
+                    if (!useChoices.includes(u)) useChoices.push(u);
+                }
+                useChoices.sort(() => Math.random() - 0.5);
+                let choicesHTML = useChoices.map(u =>
+                    `<button class="shape-btn" onclick="checkHousehold(this, '${u}', '${target.use}')">${u.charAt(0).toUpperCase() + u.slice(1)}</button>`
+                ).join('');
+                area.innerHTML = `
+                    <div class="game-instruction">What do we use the ${target.emoji} ${target.name} for?</div>
+                    <div class="shape-choices">${choicesHTML}</div>
+                `;
+            }
+        }
+
+        function checkHousehold(btn, chosen, correct) {
+            if (btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+            if (chosen === correct) {
+                btn.classList.add('correct');
+                scores.household++;
+                updateScore('household');
+                playSound('correct');
+                showFeedback(true);
+                sayGoodJob();
+                setTimeout(() => nextRound('household'), 1500);
+            } else {
+                btn.classList.add('wrong');
+                playSound('wrong');
+                showFeedback(false);
+                sayTryAgain();
+                setTimeout(() => btn.classList.remove('wrong'), 600);
+            }
+        }
+
+        // Keyboard accessibility for game cards
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                if (e.target.classList.contains('game-card')) {
+                    e.target.click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

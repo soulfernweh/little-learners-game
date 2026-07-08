@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Little Artists - Learn to Draw!</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .screen.active { display: flex; }
+
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        @keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes confettiFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+        .home-title { font-size: clamp(2rem, 5vw, 3.5rem); color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); animation: float 3s ease-in-out infinite; margin-bottom: 10px; text-align: center; }
+        .home-subtitle { font-size: 1.2rem; color: rgba(255,255,255,0.9); margin-bottom: 30px; text-align: center; }
+
+        .vehicle-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px; max-width: 650px; width: 100%;
+        }
+        .vehicle-card {
+            background: white; border-radius: 20px; padding: 25px 15px;
+            text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+        .vehicle-card:hover { transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .vehicle-card .v-icon { font-size: 3rem; display: block; margin-bottom: 8px; animation: wiggle 2s ease-in-out infinite; }
+        .vehicle-card .v-label { font-size: 1.1rem; font-weight: bold; color: #333; }
+
+        /* Drawing Screen */
+        .draw-header {
+            width: 100%; max-width: 900px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+        }
+        .draw-btn {
+            background: rgba(255,255,255,0.2); border: 2px solid white;
+            color: white; font-size: 1rem; padding: 8px 16px;
+            border-radius: 50px; cursor: pointer; transition: background 0.2s;
+        }
+        .draw-btn:hover { background: rgba(255,255,255,0.4); }
+        .step-indicator {
+            background: rgba(255,255,255,0.2); border: 2px solid white;
+            color: white; font-size: 1rem; padding: 8px 16px; border-radius: 50px;
+        }
+
+        .draw-container {
+            display: flex; gap: 16px; max-width: 900px; width: 100%;
+            flex-wrap: wrap; justify-content: center;
+        }
+
+        .guide-panel {
+            background: white; border-radius: 20px; padding: 20px;
+            flex: 1; min-width: 280px; max-width: 400px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .guide-title { font-size: 1.3rem; font-weight: bold; color: #333; margin-bottom: 12px; }
+        .guide-canvas-wrap {
+            width: 100%; aspect-ratio: 4/3; position: relative;
+            border: 3px dashed #ddd; border-radius: 12px; overflow: hidden; background: #fafafa;
+        }
+        .guide-canvas-wrap canvas { width: 100%; height: 100%; }
+        .step-text {
+            margin-top: 12px; font-size: 1.1rem; color: #555;
+            text-align: center; font-weight: 500; min-height: 50px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .draw-panel {
+            background: white; border-radius: 20px; padding: 20px;
+            flex: 1.2; min-width: 320px; max-width: 500px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .draw-title { font-size: 1.3rem; font-weight: bold; color: #333; margin-bottom: 12px; }
+        .draw-canvas-wrap {
+            width: 100%; aspect-ratio: 4/3; position: relative;
+            border: 3px solid #667eea; border-radius: 12px; overflow: hidden;
+            background: white; cursor: crosshair;
+        }
+        .draw-canvas-wrap canvas { width: 100%; height: 100%; touch-action: none; }
+
+        .toolbar {
+            display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; align-items: center;
+        }
+        .tool-btn {
+            width: 40px; height: 40px; border-radius: 50%; border: 3px solid #ddd;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; background: white;
+        }
+        .tool-btn:hover { transform: scale(1.1); border-color: #667eea; }
+        .tool-btn.active { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.3); }
+        .color-dot {
+            width: 36px; height: 36px; border-radius: 50%; border: 3px solid #ddd;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .color-dot:hover { transform: scale(1.15); }
+        .color-dot.active { border-color: #333; box-shadow: 0 0 0 3px rgba(0,0,0,0.2); transform: scale(1.1); }
+
+        .nav-btns { display: flex; gap: 10px; margin-top: 15px; }
+        .nav-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2); color: white;
+            border: none; padding: 10px 24px; font-size: 1.1rem; border-radius: 50px;
+            cursor: pointer; font-weight: bold; transition: transform 0.2s;
+        }
+        .nav-btn:hover { transform: scale(1.05); }
+        .nav-btn.green { background: linear-gradient(135deg, #43e97b, #38f9d7); color: #333; }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        /* Completion overlay */
+        .complete-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .complete-overlay.active { display: flex; }
+        .complete-card {
+            background: white; border-radius: 24px; padding: 40px; text-align: center;
+            max-width: 400px; width: 90%; animation: pop 0.4s ease;
+        }
+        .complete-card h2 { font-size: 1.8rem; margin-bottom: 10px; }
+        .complete-card p { font-size: 1.1rem; color: #555; margin-bottom: 20px; }
+
+        .sound-toggle {
+            position: fixed; top: 12px; right: 12px;
+            background: rgba(255,255,255,0.25); border: 2px solid white;
+            color: white; font-size: 1.3rem; width: 44px; height: 44px;
+            border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+        }
+
+        @media (max-width: 600px) {
+            .draw-container { flex-direction: column; }
+            .guide-panel, .draw-panel { max-width: 100%; min-width: unset; }
+        }
+    </style>
+</head>
+<body>
+    <button class="sound-toggle" id="soundToggle" aria-label="Toggle sound">🔊</button>
+
+    <!-- HOME SCREEN -->
+    <div class="screen active" id="homeScreen">
+        <h1 class="home-title">🎨 Little Artists</h1>
+        <p class="home-subtitle">Pick something to draw!</p>
+        <div class="vehicle-grid">
+            <div class="vehicle-card" onclick="startDrawing('car')">
+                <span class="v-icon">🚗</span><span class="v-label">Car</span>
+            </div>
+            <div class="vehicle-card" onclick="startDrawing('truck')">
+                <span class="v-icon">🚚</span><span class="v-label">Truck</span>
+            </div>
+            <div class="vehicle-card" onclick="startDrawing('bus')">
+                <span class="v-icon">🚌</span><span class="v-label">Bus</span>
+            </div>
+            <div class="vehicle-card" onclick="startDrawing('ship')">
+                <span class="v-icon">🚢</span><span class="v-label">Ship</span>
+            </div>
+            <div class="vehicle-card" onclick="startDrawing('plane')">
+                <span class="v-icon">✈️</span><span class="v-label">Airplane</span>
+            </div>
+            <div class="vehicle-card" onclick="startDrawing('helicopter')">
+                <span class="v-icon">🚁</span><span class="v-label">Helicopter</span>
+            </div>
+        </div>
+        <a href="index.html" style="margin-top:20px; color:white; font-size:0.95rem; opacity:0.8; text-decoration:underline;">← Back to Little Learners</a>
+    </div>
+
+    <!-- DRAWING SCREEN -->
+    <div class="screen" id="drawScreen">
+        <div class="draw-header">
+            <button class="draw-btn" onclick="goHome()">🏠 Home</button>
+            <div class="step-indicator" id="stepIndicator">Step 1 of 5</div>
+            <button class="draw-btn" onclick="clearCanvas()">🗑️ Clear</button>
+        </div>
+        <div class="draw-container">
+            <div class="guide-panel">
+                <div class="guide-title" id="guideTitle">Follow along! 👀</div>
+                <div class="guide-canvas-wrap">
+                    <canvas id="guideCanvas" width="400" height="300"></canvas>
+                </div>
+                <div class="step-text" id="stepText">Loading...</div>
+            </div>
+            <div class="draw-panel">
+                <div class="draw-title">Your Drawing ✏️</div>
+                <div class="draw-canvas-wrap">
+                    <canvas id="drawCanvas" width="400" height="300"></canvas>
+                </div>
+                <div class="toolbar" id="toolbar">
+                    <div class="color-dot active" style="background:#333" onclick="setColor('#333')"></div>
+                    <div class="color-dot" style="background:#ff4444" onclick="setColor('#ff4444')"></div>
+                    <div class="color-dot" style="background:#4488ff" onclick="setColor('#4488ff')"></div>
+                    <div class="color-dot" style="background:#44bb44" onclick="setColor('#44bb44')"></div>
+                    <div class="color-dot" style="background:#ffcc00" onclick="setColor('#ffcc00')"></div>
+                    <div class="color-dot" style="background:#ff8800" onclick="setColor('#ff8800')"></div>
+                    <button class="tool-btn" onclick="setThin()" id="thinBtn">·</button>
+                    <button class="tool-btn active" onclick="setThick()" id="thickBtn">●</button>
+                    <button class="tool-btn" onclick="undoStroke()">↩️</button>
+                </div>
+                <div class="nav-btns">
+                    <button class="nav-btn" id="prevBtn" onclick="prevStep()" disabled>← Back</button>
+                    <button class="nav-btn green" id="nextBtn" onclick="nextStep()">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPLETION OVERLAY -->
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-card">
+            <h2>🌟 Amazing Drawing! 🌟</h2>
+            <p id="completeMsg">You drew a beautiful car!</p>
+            <button class="nav-btn" onclick="goHome(); hideComplete();">Draw Something Else</button>
+        </div>
+    </div>
+
+    <script>
+        // ========== STATE ==========
+        let currentVehicle = null;
+        let currentStep = 0;
+        let soundEnabled = true;
+        let drawColor = '#333';
+        let drawWidth = 5;
+        let isDrawing = false;
+        let strokes = []; // array of stroke arrays for undo
+        let currentStroke = [];
+
+        // ========== AUDIO & SPEECH ==========
+        let audioCtx;
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            try { audioCtx.resume(); } catch(e) {}
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination); gain.gain.value = 0.25;
+            if (type === 'step') {
+                osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'done') {
+                osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.12);
+                osc.frequency.setValueAtTime(784, audioCtx.currentTime + 0.24);
+                osc.frequency.setValueAtTime(1047, audioCtx.currentTime + 0.36);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.6);
+            }
+        }
+
+        function sayText(text) {
+            if (!soundEnabled || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.rate = 0.85; utter.pitch = 1.1; utter.volume = 0.9;
+            const voices = window.speechSynthesis.getVoices();
+            const preferred = ['Microsoft Zira','Samantha','Google UK English Female','Karen','Moira'];
+            let chosen = null;
+            for (const p of preferred) { chosen = voices.find(v => v.name.includes(p)); if (chosen) break; }
+            if (!chosen) chosen = voices.find(v => /female|woman/i.test(v.name));
+            if (chosen) utter.voice = chosen;
+            window.speechSynthesis.speak(utter);
+        }
+
+        if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
+
+        document.getElementById('soundToggle').onclick = () => {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+        };
+
+        // ========== DRAWING STEPS DATA ==========
+        const vehicles = {
+            car: {
+                name: 'Car',
+                steps: [
+                    { text: "Draw a big rectangle for the car body", draw: (ctx, w, h) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.strokeRect(w*0.15, h*0.45, w*0.7, h*0.25); } },
+                    { text: "Add a smaller shape on top for the roof", draw: (ctx, w, h) => { ctx.beginPath(); ctx.moveTo(w*0.3, h*0.45); ctx.lineTo(w*0.38, h*0.25); ctx.lineTo(w*0.68, h*0.25); ctx.lineTo(w*0.75, h*0.45); ctx.stroke(); } },
+                    { text: "Draw two circles for the wheels", draw: (ctx, w, h) => { ctx.beginPath(); ctx.arc(w*0.32, h*0.72, w*0.08, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(w*0.68, h*0.72, w*0.08, 0, Math.PI*2); ctx.stroke(); } },
+                    { text: "Add windows inside the roof", draw: (ctx, w, h) => { ctx.strokeRect(w*0.4, h*0.28, w*0.12, h*0.14); ctx.strokeRect(w*0.55, h*0.28, w*0.12, h*0.14); } },
+                    { text: "Draw headlights and a door handle!", draw: (ctx, w, h) => { ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(w*0.85, h*0.55, w*0.025, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(w*0.15, h*0.55, w*0.025, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#333'; ctx.beginPath(); ctx.moveTo(w*0.48, h*0.55); ctx.lineTo(w*0.54, h*0.55); ctx.stroke(); } },
+                ]
+            },
+            truck: {
+                name: 'Truck',
+                steps: [
+                    { text: "Draw a big rectangle for the trailer", draw: (ctx, w, h) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.strokeRect(w*0.3, h*0.25, w*0.55, h*0.4); } },
+                    { text: "Draw a smaller box for the cab at the front", draw: (ctx, w, h) => { ctx.strokeRect(w*0.1, h*0.35, w*0.2, h*0.3); } },
+                    { text: "Add the wheels — two at back, one at front", draw: (ctx, w, h) => { ctx.beginPath(); ctx.arc(w*0.55, h*0.7, w*0.06, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(w*0.72, h*0.7, w*0.06, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(w*0.22, h*0.7, w*0.06, 0, Math.PI*2); ctx.stroke(); } },
+                    { text: "Add a window to the cab", draw: (ctx, w, h) => { ctx.strokeRect(w*0.13, h*0.38, w*0.13, h*0.12); } },
+                    { text: "Add details — headlight and lines on trailer!", draw: (ctx, w, h) => { ctx.fillStyle='#ffcc00'; ctx.beginPath(); ctx.arc(w*0.1, h*0.55, w*0.02, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#aaa'; ctx.beginPath(); ctx.moveTo(w*0.3, h*0.45); ctx.lineTo(w*0.85, h*0.45); ctx.stroke(); } },
+                ]
+            },
+            bus: {
+                name: 'Bus',
+                steps: [
+                    { text: "Draw a long rectangle for the bus body", draw: (ctx, w, h) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.strokeRect(w*0.1, h*0.3, w*0.8, h*0.35); } },
+                    { text: "Draw a row of windows along the top", draw: (ctx, w, h) => { for(let i=0; i<5; i++) ctx.strokeRect(w*(0.15+i*0.14), h*0.34, w*0.1, h*0.13); } },
+                    { text: "Add two big wheels at the bottom", draw: (ctx, w, h) => { ctx.beginPath(); ctx.arc(w*0.28, h*0.68, w*0.065, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(w*0.72, h*0.68, w*0.065, 0, Math.PI*2); ctx.stroke(); } },
+                    { text: "Draw the door on the side", draw: (ctx, w, h) => { ctx.strokeRect(w*0.78, h*0.42, w*0.08, h*0.2); ctx.beginPath(); ctx.moveTo(w*0.82, h*0.42); ctx.lineTo(w*0.82, h*0.62); ctx.stroke(); } },
+                    { text: "Add headlights and color it in your favorite color!", draw: (ctx, w, h) => { ctx.fillStyle='#ffcc00'; ctx.beginPath(); ctx.arc(w*0.9, h*0.5, w*0.02, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(w*0.1, h*0.5, w*0.02, 0, Math.PI*2); ctx.fill(); } },
+                ]
+            },
+
+            ship: {
+                name: 'Ship',
+                steps: [
+                    { text: "Draw the hull — a trapezoid shape at the bottom", draw: (ctx, w, h) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(w*0.1, h*0.6); ctx.lineTo(w*0.2, h*0.75); ctx.lineTo(w*0.8, h*0.75); ctx.lineTo(w*0.9, h*0.6); ctx.closePath(); ctx.stroke(); } },
+                    { text: "Add the deck — a rectangle on top of the hull", draw: (ctx, w, h) => { ctx.strokeRect(w*0.2, h*0.42, w*0.6, h*0.18); } },
+                    { text: "Draw the cabin on top of the deck", draw: (ctx, w, h) => { ctx.strokeRect(w*0.35, h*0.25, w*0.3, h*0.17); } },
+                    { text: "Add a smokestack (chimney) on top", draw: (ctx, w, h) => { ctx.strokeRect(w*0.55, h*0.12, w*0.08, h*0.13); ctx.beginPath(); ctx.moveTo(w*0.57, h*0.12); ctx.quadraticCurveTo(w*0.59, h*0.05, w*0.63, h*0.08); ctx.stroke(); } },
+                    { text: "Add portholes (circles) and waves!", draw: (ctx, w, h) => { for(let i=0; i<4; i++) { ctx.beginPath(); ctx.arc(w*(0.28+i*0.13), h*0.68, w*0.02, 0, Math.PI*2); ctx.stroke(); } ctx.strokeStyle='#4488ff'; ctx.beginPath(); ctx.moveTo(w*0.05, h*0.8); for(let i=0; i<8; i++) ctx.quadraticCurveTo(w*(0.05+i*0.12+0.06), h*(i%2===0?0.77:0.83), w*(0.05+(i+1)*0.12), h*0.8); ctx.stroke(); } },
+                ]
+            },
+            plane: {
+                name: 'Airplane',
+                steps: [
+                    { text: "Draw the body — a long oval shape", draw: (ctx, w, h) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(w*0.5, h*0.5, w*0.35, h*0.1, 0, 0, Math.PI*2); ctx.stroke(); } },
+                    { text: "Add the main wings going out from the middle", draw: (ctx, w, h) => { ctx.beginPath(); ctx.moveTo(w*0.45, h*0.5); ctx.lineTo(w*0.55, h*0.25); ctx.lineTo(w*0.62, h*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w*0.45, h*0.5); ctx.lineTo(w*0.55, h*0.75); ctx.lineTo(w*0.62, h*0.5); ctx.stroke(); } },
+                    { text: "Draw the tail fin at the back (left side)", draw: (ctx, w, h) => { ctx.beginPath(); ctx.moveTo(w*0.18, h*0.5); ctx.lineTo(w*0.1, h*0.3); ctx.lineTo(w*0.15, h*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w*0.18, h*0.5); ctx.lineTo(w*0.1, h*0.6); ctx.lineTo(w*0.15, h*0.5); ctx.stroke(); } },
+                    { text: "Add windows along the body", draw: (ctx, w, h) => { for(let i=0; i<5; i++) { ctx.beginPath(); ctx.arc(w*(0.35+i*0.08), h*0.48, w*0.015, 0, Math.PI*2); ctx.stroke(); } } },
+                    { text: "Draw the nose cone and add some color!", draw: (ctx, w, h) => { ctx.beginPath(); ctx.moveTo(w*0.85, h*0.5); ctx.lineTo(w*0.92, h*0.48); ctx.lineTo(w*0.92, h*0.52); ctx.closePath(); ctx.fillStyle='#ff4444'; ctx.fill(); ctx.strokeStyle='#4488ff'; ctx.beginPath(); ctx.moveTo(w*0.3, h*0.44); ctx.lineTo(w*0.8, h*0.44); ctx.stroke(); } },
+                ]
+            },
+            helicopter: {
+                name: 'Helicopter',
+                steps: [
+                    { text: "Draw the body — an oval shape", draw: (ctx, w, h) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(w*0.45, h*0.5, w*0.2, h*0.12, 0, 0, Math.PI*2); ctx.stroke(); } },
+                    { text: "Add the tail — a long line going to the right with a fin", draw: (ctx, w, h) => { ctx.beginPath(); ctx.moveTo(w*0.65, h*0.5); ctx.lineTo(w*0.88, h*0.48); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w*0.85, h*0.38); ctx.lineTo(w*0.88, h*0.48); ctx.lineTo(w*0.91, h*0.38); ctx.stroke(); } },
+                    { text: "Draw the big rotor blade on top", draw: (ctx, w, h) => { ctx.beginPath(); ctx.moveTo(w*0.45, h*0.38); ctx.lineTo(w*0.45, h*0.32); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w*0.2, h*0.32); ctx.lineTo(w*0.7, h*0.32); ctx.stroke(); ctx.beginPath(); ctx.arc(w*0.45, h*0.32, w*0.02, 0, Math.PI*2); ctx.stroke(); } },
+                    { text: "Add the landing skids underneath", draw: (ctx, w, h) => { ctx.beginPath(); ctx.moveTo(w*0.32, h*0.62); ctx.lineTo(w*0.32, h*0.68); ctx.lineTo(w*0.58, h*0.68); ctx.lineTo(w*0.58, h*0.62); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w*0.28, h*0.68); ctx.lineTo(w*0.62, h*0.68); ctx.stroke(); } },
+                    { text: "Add the cockpit window and details!", draw: (ctx, w, h) => { ctx.beginPath(); ctx.ellipse(w*0.35, h*0.48, w*0.07, h*0.07, 0, 0, Math.PI*2); ctx.strokeStyle='#4488ff'; ctx.stroke(); ctx.fillStyle='#4488ff22'; ctx.fill(); } },
+                ]
+            },
+        };
+
+        // ========== NAVIGATION ==========
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+        function goHome() { showScreen('homeScreen'); }
+
+        function startDrawing(vehicleKey) {
+            currentVehicle = vehicles[vehicleKey];
+            currentStep = 0;
+            strokes = [];
+            currentStroke = [];
+            showScreen('drawScreen');
+            resizeCanvases();
+            clearCanvas();
+            renderStep();
+            sayText(`Let's draw a ${currentVehicle.name}! Follow along step by step.`);
+        }
+
+        // ========== GUIDE RENDERING ==========
+        function renderStep() {
+            const guideCtx = document.getElementById('guideCanvas').getContext('2d');
+            const gw = document.getElementById('guideCanvas').width;
+            const gh = document.getElementById('guideCanvas').height;
+            guideCtx.clearRect(0, 0, gw, gh);
+
+            // Draw all steps up to current as a progressive guide
+            for (let i = 0; i <= currentStep; i++) {
+                guideCtx.save();
+                if (i < currentStep) {
+                    guideCtx.globalAlpha = 0.35; // Previous steps faded
+                } else {
+                    guideCtx.globalAlpha = 1;
+                    guideCtx.setLineDash([]);
+                }
+                currentVehicle.steps[i].draw(guideCtx, gw, gh);
+                guideCtx.restore();
+            }
+
+            // Animate current step with pulsing
+            highlightCurrentStep(guideCtx, gw, gh);
+
+            // Update UI
+            const total = currentVehicle.steps.length;
+            document.getElementById('stepIndicator').textContent = `Step ${currentStep + 1} of ${total}`;
+            document.getElementById('stepText').textContent = currentVehicle.steps[currentStep].text;
+            document.getElementById('guideTitle').textContent = `Drawing: ${currentVehicle.name} 👀`;
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').textContent = currentStep === total - 1 ? 'Done! 🎉' : 'Next →';
+
+            playSound('step');
+            sayText(currentVehicle.steps[currentStep].text);
+        }
+
+        function highlightCurrentStep(ctx, w, h) {
+            // Redraw current step with highlighted color
+            ctx.save();
+            ctx.strokeStyle = '#f5576c';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([8, 4]);
+            currentVehicle.steps[currentStep].draw(ctx, w, h);
+            ctx.restore();
+        }
+
+        function nextStep() {
+            if (currentStep >= currentVehicle.steps.length - 1) {
+                completeDrawing();
+                return;
+            }
+            currentStep++;
+            renderStep();
+        }
+
+        function prevStep() {
+            if (currentStep <= 0) return;
+            currentStep--;
+            renderStep();
+        }
+
+        function completeDrawing() {
+            playSound('done');
+            showConfetti();
+            sayText(`Wonderful! You drew a beautiful ${currentVehicle.name}! You're a real artist!`);
+            document.getElementById('completeMsg').textContent = `You drew a beautiful ${currentVehicle.name}! 🎨`;
+            document.getElementById('completeOverlay').classList.add('active');
+        }
+
+        function hideComplete() {
+            document.getElementById('completeOverlay').classList.remove('active');
+        }
+
+        // ========== DRAWING CANVAS ==========
+        const drawCanvas = document.getElementById('drawCanvas');
+        const drawCtx = drawCanvas.getContext('2d');
+
+        function resizeCanvases() {
+            const guideWrap = document.querySelector('.guide-canvas-wrap');
+            const drawWrap = document.querySelector('.draw-canvas-wrap');
+            const gc = document.getElementById('guideCanvas');
+            const dc = document.getElementById('drawCanvas');
+
+            gc.width = guideWrap.clientWidth;
+            gc.height = guideWrap.clientHeight;
+            dc.width = drawWrap.clientWidth;
+            dc.height = drawWrap.clientHeight;
+        }
+
+        function clearCanvas() {
+            const dc = document.getElementById('drawCanvas');
+            drawCtx.clearRect(0, 0, dc.width, dc.height);
+            strokes = [];
+        }
+
+        function undoStroke() {
+            strokes.pop();
+            redrawStrokes();
+        }
+
+        function redrawStrokes() {
+            const dc = document.getElementById('drawCanvas');
+            drawCtx.clearRect(0, 0, dc.width, dc.height);
+            for (const stroke of strokes) {
+                if (stroke.length < 2) continue;
+                drawCtx.beginPath();
+                drawCtx.strokeStyle = stroke[0].color;
+                drawCtx.lineWidth = stroke[0].width;
+                drawCtx.lineCap = 'round';
+                drawCtx.lineJoin = 'round';
+                drawCtx.moveTo(stroke[0].x, stroke[0].y);
+                for (let i = 1; i < stroke.length; i++) {
+                    drawCtx.lineTo(stroke[i].x, stroke[i].y);
+                }
+                drawCtx.stroke();
+            }
+        }
+
+        function getPos(e) {
+            const rect = drawCanvas.getBoundingClientRect();
+            const scaleX = drawCanvas.width / rect.width;
+            const scaleY = drawCanvas.height / rect.height;
+            if (e.touches) {
+                return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY };
+            }
+            return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+        }
+
+        function startDraw(e) {
+            e.preventDefault();
+            isDrawing = true;
+            const pos = getPos(e);
+            currentStroke = [{ x: pos.x, y: pos.y, color: drawColor, width: drawWidth }];
+            drawCtx.beginPath();
+            drawCtx.moveTo(pos.x, pos.y);
+            drawCtx.strokeStyle = drawColor;
+            drawCtx.lineWidth = drawWidth;
+            drawCtx.lineCap = 'round';
+            drawCtx.lineJoin = 'round';
+        }
+
+        function doDraw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            currentStroke.push({ x: pos.x, y: pos.y, color: drawColor, width: drawWidth });
+            drawCtx.lineTo(pos.x, pos.y);
+            drawCtx.stroke();
+        }
+
+        function endDraw(e) {
+            if (!isDrawing) return;
+            isDrawing = false;
+            if (currentStroke.length > 1) {
+                strokes.push(currentStroke);
+            }
+            currentStroke = [];
+        }
+
+        // Mouse events
+        drawCanvas.addEventListener('mousedown', startDraw);
+        drawCanvas.addEventListener('mousemove', doDraw);
+        drawCanvas.addEventListener('mouseup', endDraw);
+        drawCanvas.addEventListener('mouseleave', endDraw);
+        // Touch events
+        drawCanvas.addEventListener('touchstart', startDraw);
+        drawCanvas.addEventListener('touchmove', doDraw);
+        drawCanvas.addEventListener('touchend', endDraw);
+
+        // ========== TOOLS ==========
+        function setColor(c) {
+            drawColor = c;
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function setThin() {
+            drawWidth = 3;
+            document.getElementById('thinBtn').classList.add('active');
+            document.getElementById('thickBtn').classList.remove('active');
+        }
+
+        function setThick() {
+            drawWidth = 5;
+            document.getElementById('thickBtn').classList.add('active');
+            document.getElementById('thinBtn').classList.remove('active');
+        }
+
+        // ========== CONFETTI ==========
+        function showConfetti() {
+            const colors = ['#ff6b6b','#ffd93d','#6bcf7f','#4ecdc4','#667eea','#764ba2','#ff9a9e','#f093fb'];
+            for (let i = 0; i < 40; i++) {
+                const c = document.createElement('div');
+                c.style.cssText = `
+                    position:fixed; width:10px; height:10px; border-radius:50%;
+                    background:${colors[Math.floor(Math.random()*colors.length)]};
+                    left:${Math.random()*100}vw; top:-20px;
+                    pointer-events:none; z-index:1001;
+                    animation: confettiFall ${1.5+Math.random()}s ease-out forwards;
+                    animation-delay: ${Math.random()*0.5}s;
+                `;
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }
+        }
+
+        // ========== RESIZE ==========
+        window.addEventListener('resize', () => {
+            if (currentVehicle) {
+                resizeCanvases();
+                renderStep();
+                redrawStrokes();
+            }
+        });
+    </script>
+</body>
+</html>

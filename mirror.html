@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🪞 Magic Mirror - Animated Buddy!</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            min-height: 100vh; overflow: hidden;
+        }
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .screen.active { display: flex; }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+        .home-title { font-size: clamp(2rem,5vw,3.5rem); color:#fff; text-shadow:2px 2px 4px rgba(0,0,0,0.2); animation:float 3s ease-in-out infinite; margin-bottom:10px; text-align:center; }
+        .home-subtitle { font-size:1.15rem; color:rgba(255,255,255,0.9); margin-bottom:30px; text-align:center; max-width:500px; line-height:1.5; }
+
+        .start-card { background:white; border-radius:24px; padding:40px; text-align:center; max-width:500px; width:100%; box-shadow:0 10px 40px rgba(0,0,0,0.15); }
+        .start-card h2 { font-size:1.5rem; color:#333; margin-bottom:15px; }
+        .start-card p { color:#666; margin-bottom:20px; line-height:1.5; }
+        .char-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+        .char-pick { border:3px solid #ddd; border-radius:16px; padding:15px 10px; cursor:pointer; text-align:center; transition:all 0.2s; background:#fafafa; }
+        .char-pick:hover { border-color:#43e97b; transform:scale(1.04); }
+        .char-pick.selected { border-color:#43e97b; background:#e8fef0; transform:scale(1.06); }
+        .char-pick .char-icon { font-size:2.5rem; display:block; margin-bottom:4px; }
+        .char-pick .char-name { font-size:0.85rem; font-weight:bold; color:#333; }
+        .big-btn { background:linear-gradient(135deg,#43e97b,#38f9d7); color:#333; border:none; padding:16px 40px; font-size:1.3rem; border-radius:50px; cursor:pointer; font-weight:bold; transition:transform 0.2s; }
+        .big-btn:hover { transform:scale(1.05); }
+        .big-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+        #errorMsg { color:#f44; margin-top:15px; display:none; }
+
+        /* Mirror screen */
+        .mirror-wrap { position:relative; width:100vw; height:100vh; background:#1a1a2e; }
+        #avatarCanvas { width:100%; height:100%; display:block; }
+        video#camFeed { position:absolute; bottom:10px; right:10px; width:140px; height:105px; border-radius:12px; border:3px solid rgba(255,255,255,0.4); object-fit:cover; transform:scaleX(-1); opacity:0.75; z-index:10; }
+        .mirror-overlay { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; display:flex; flex-direction:column; justify-content:space-between; padding:15px; }
+        .mirror-top { display:flex; justify-content:space-between; align-items:flex-start; pointer-events:all; }
+        .m-btn { background:rgba(255,255,255,0.15); backdrop-filter:blur(8px); border:2px solid rgba(255,255,255,0.4); color:white; font-size:1rem; padding:8px 16px; border-radius:50px; cursor:pointer; }
+        .m-btn:hover { background:rgba(255,255,255,0.35); }
+        .action-box { background:rgba(0,0,0,0.55); backdrop-filter:blur(8px); border-radius:16px; padding:12px 20px; color:white; text-align:center; max-width:350px; }
+        .action-box .a-label { font-size:0.8rem; opacity:0.7; }
+        .action-box .a-text { font-size:1.15rem; font-weight:bold; margin-top:3px; }
+        .mirror-bottom { display:flex; justify-content:center; gap:10px; pointer-events:all; flex-wrap:wrap; }
+        .mode-btn { background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.4); color:white; padding:8px 16px; border-radius:50px; cursor:pointer; font-size:0.9rem; transition:all 0.2s; }
+        .mode-btn:hover,.mode-btn.active { background:rgba(255,255,255,0.35); border-color:white; }
+        .loading-msg { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-size:1.2rem; text-align:center; }
+        .loading-msg .spin { font-size:2.5rem; animation:float 1.5s ease-in-out infinite; display:block; margin-bottom:10px; }
+        .sound-toggle { position:fixed; top:12px; right:12px; background:rgba(255,255,255,0.25); border:2px solid white; color:white; font-size:1.3rem; width:44px; height:44px; border-radius:50%; cursor:pointer; z-index:200; display:flex; align-items:center; justify-content:center; }
+        .back-link { color:white; text-decoration:underline; opacity:0.8; margin-top:15px; font-size:0.95rem; }
+    </style>
+</head>
+<body>
+<button class="sound-toggle" id="soundToggle">🔊</button>
+
+<!-- HOME SCREEN -->
+<div class="screen active" id="homeScreen">
+    <h1 class="home-title">🪞 Magic Mirror</h1>
+    <p class="home-subtitle">Pick a character! It will copy your every move like magic!</p>
+    <div class="start-card">
+        <h2>Choose Your Buddy</h2>
+        <div class="char-grid" id="charGrid">
+            <div class="char-pick selected" data-char="stickfigure" onclick="pickChar(this)"><span class="char-icon">🧍</span><span class="char-name">Stick Figure</span></div>
+            <div class="char-pick" data-char="robot" onclick="pickChar(this)"><span class="char-icon">🤖</span><span class="char-name">Robot</span></div>
+            <div class="char-pick" data-char="dinosaur" onclick="pickChar(this)"><span class="char-icon">🦖</span><span class="char-name">Dinosaur</span></div>
+            <div class="char-pick" data-char="fish" onclick="pickChar(this)"><span class="char-icon">🐟</span><span class="char-name">Fish</span></div>
+            <div class="char-pick" data-char="cat" onclick="pickChar(this)"><span class="char-icon">🐱</span><span class="char-name">Cat</span></div>
+            <div class="char-pick" data-char="alien" onclick="pickChar(this)"><span class="char-icon">👽</span><span class="char-name">Alien</span></div>
+        </div>
+        <button class="big-btn" id="startBtn" onclick="startMirror()">Start! 🎬</button>
+        <p id="errorMsg"></p>
+    </div>
+    <a href="index.html" class="back-link">← Back to Little Learners</a>
+</div>
+
+<!-- MIRROR SCREEN -->
+<div class="screen" id="mirrorScreen">
+    <div class="mirror-wrap">
+        <canvas id="avatarCanvas"></canvas>
+        <video id="camFeed" autoplay playsinline muted></video>
+        <div class="loading-msg" id="loadingMsg"><span class="spin">🪄</span>Setting up your buddy...</div>
+        <div class="mirror-overlay">
+            <div class="mirror-top">
+                <button class="m-btn" onclick="stopMirror()">🏠 Home</button>
+                <div class="action-box" id="actionBox">
+                    <div class="a-label">✨ Try this!</div>
+                    <div class="a-text" id="actionText">Move around and watch your buddy copy you!</div>
+                </div>
+                <button class="m-btn" onclick="nextAction()">Next ➡️</button>
+            </div>
+            <div class="mirror-bottom">
+                <button class="mode-btn active" data-char="stickfigure" onclick="switchChar('stickfigure',this)">🧍</button>
+                <button class="mode-btn" data-char="robot" onclick="switchChar('robot',this)">🤖</button>
+                <button class="mode-btn" data-char="dinosaur" onclick="switchChar('dinosaur',this)">🦖</button>
+                <button class="mode-btn" data-char="fish" onclick="switchChar('fish',this)">🐟</button>
+                <button class="mode-btn" data-char="cat" onclick="switchChar('cat',this)">🐱</button>
+                <button class="mode-btn" data-char="alien" onclick="switchChar('alien',this)">👽</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { PoseLandmarker, FilesetResolver, DrawingUtils } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
+
+// ========== STATE ==========
+let selectedChar = 'stickfigure';
+let poseLandmarker = null;
+let stream = null;
+let animFrame = null;
+let soundEnabled = true;
+let landmarks = null;
+
+// ========== SPEECH ==========
+function sayText(text) {
+    if (!soundEnabled || !('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.85; u.pitch = 1.1; u.volume = 0.9;
+    const voices = speechSynthesis.getVoices();
+    const pref = ['Microsoft Zira','Samantha','Google UK English Female','Karen'];
+    let v = null;
+    for (const p of pref) { v = voices.find(x => x.name.includes(p)); if (v) break; }
+    if (!v) v = voices.find(x => /female/i.test(x.name));
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+}
+if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
+
+document.getElementById('soundToggle').onclick = () => {
+    soundEnabled = !soundEnabled;
+    document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+};
+
+// ========== CHARACTER SELECTION ==========
+window.pickChar = function(el) {
+    document.querySelectorAll('.char-pick').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedChar = el.dataset.char;
+};
+
+window.switchChar = function(char, btn) {
+    selectedChar = char;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+};
+
+// ========== ACTIONS ==========
+const actions = [
+    "Raise your hands above your head! 🙌",
+    "Wave hello with one hand! 👋",
+    "Touch your nose! 👃",
+    "Do a big stretch! 🤸",
+    "Stand on one foot! 🦩",
+    "Flap your arms like a bird! 🐦",
+    "Put your hands on your hips! 💪",
+    "Reach up to the sky! ☁️",
+    "Crouch down low! ⬇️",
+    "Wiggle your whole body! 💃",
+    "Make yourself really tall! ⬆️",
+    "Give yourself a hug! 🤗",
+    "Jump up high! 🦘",
+    "Clap your hands! 👏",
+    "Spin around slowly! 🌀",
+];
+window.nextAction = function() {
+    const a = actions[Math.floor(Math.random() * actions.length)];
+    document.getElementById('actionText').textContent = a;
+    sayText(a);
+};
+
+// ========== MEDIAPIPE SETUP ==========
+async function initPose() {
+    const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm');
+    poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task', delegate: 'GPU' },
+        runningMode: 'VIDEO',
+        numPoses: 1
+    });
+}
+
+// ========== START / STOP ==========
+window.startMirror = async function() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        document.getElementById('camFeed').srcObject = stream;
+        showScreen('mirrorScreen');
+        document.getElementById('loadingMsg').style.display = 'block';
+        await initPose();
+        document.getElementById('loadingMsg').style.display = 'none';
+        sayText(`Here's your ${selectedChar} buddy! Move around and watch it copy you!`);
+        startLoop();
+    } catch (err) {
+        const msg = document.getElementById('errorMsg');
+        msg.style.display = 'block';
+        msg.textContent = err.name === 'NotAllowedError' ? 'Camera permission denied. Please allow access.' : 'Could not start: ' + err.message;
+    }
+};
+
+window.stopMirror = function() {
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    document.getElementById('camFeed').srcObject = null;
+    showScreen('homeScreen');
+};
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (id === 'mirrorScreen') resizeCanvas();
+}
+
+function resizeCanvas() {
+    const c = document.getElementById('avatarCanvas');
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ========== MAIN LOOP ==========
+function startLoop() {
+    const video = document.getElementById('camFeed');
+    const canvas = document.getElementById('avatarCanvas');
+    const ctx = canvas.getContext('2d');
+    let lastTime = -1;
+
+    function loop() {
+        animFrame = requestAnimationFrame(loop);
+        if (video.readyState < 2) return;
+        const now = performance.now();
+        if (now - lastTime < 33) return; // ~30fps
+        lastTime = now;
+
+        const result = poseLandmarker.detectForVideo(video, now);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Background
+        drawBackground(ctx, canvas.width, canvas.height);
+
+        if (result.landmarks && result.landmarks.length > 0) {
+            landmarks = result.landmarks[0];
+            drawCharacter(ctx, canvas.width, canvas.height, landmarks);
+        } else {
+            // No pose — show waiting message
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Step back so I can see you! 👀', canvas.width/2, canvas.height/2);
+        }
+    }
+    loop();
+}
+
+function drawBackground(ctx, w, h) {
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#87CEEB');
+    grad.addColorStop(0.7, '#98FB98');
+    grad.addColorStop(1, '#90EE90');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    // Simple ground
+    ctx.fillStyle = '#6BCB77';
+    ctx.fillRect(0, h * 0.85, w, h * 0.15);
+    // Sun
+    ctx.fillStyle = '#FFD93D';
+    ctx.beginPath(); ctx.arc(w * 0.85, h * 0.12, 40, 0, Math.PI * 2); ctx.fill();
+}
+
+// ========== CHARACTER DRAWING ==========
+// MediaPipe landmark indices:
+// 0=nose, 11=left shoulder, 12=right shoulder, 13=left elbow, 14=right elbow,
+// 15=left wrist, 16=right wrist, 23=left hip, 24=right hip,
+// 25=left knee, 26=right knee, 27=left ankle, 28=right ankle
+
+function lm(landmarks, i, w, h) {
+    // Mirror X so character faces same direction as user
+    return { x: (1 - landmarks[i].x) * w, y: landmarks[i].y * h };
+}
+
+function drawCharacter(ctx, w, h, lmks) {
+    switch(selectedChar) {
+        case 'stickfigure': drawStickFigure(ctx, w, h, lmks); break;
+        case 'robot': drawRobot(ctx, w, h, lmks); break;
+        case 'dinosaur': drawDinosaur(ctx, w, h, lmks); break;
+        case 'fish': drawFish(ctx, w, h, lmks); break;
+        case 'cat': drawCat(ctx, w, h, lmks); break;
+        case 'alien': drawAlien(ctx, w, h, lmks); break;
+    }
+}
+
+function drawLimb(ctx, p1, p2, color, width) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+}
+
+function drawCircle(ctx, p, r, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill();
+}
+
+// ===== STICK FIGURE =====
+function drawStickFigure(ctx, w, h, l) {
+    const nose = lm(l,0,w,h), ls = lm(l,11,w,h), rs = lm(l,12,w,h);
+    const le = lm(l,13,w,h), re = lm(l,14,w,h), lw = lm(l,15,w,h), rw = lm(l,16,w,h);
+    const lh = lm(l,23,w,h), rh = lm(l,24,w,h), lk = lm(l,25,w,h), rk = lm(l,26,w,h);
+    const la = lm(l,27,w,h), ra = lm(l,28,w,h);
+    const mid = { x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 };
+    const hip = { x:(lh.x+rh.x)/2, y:(lh.y+rh.y)/2 };
+
+    // Body
+    drawLimb(ctx, mid, hip, '#333', 8);
+    // Arms
+    drawLimb(ctx, ls, le, '#333', 7); drawLimb(ctx, le, lw, '#333', 7);
+    drawLimb(ctx, rs, re, '#333', 7); drawLimb(ctx, re, rw, '#333', 7);
+    // Legs
+    drawLimb(ctx, lh, lk, '#333', 7); drawLimb(ctx, lk, la, '#333', 7);
+    drawLimb(ctx, rh, rk, '#333', 7); drawLimb(ctx, rk, ra, '#333', 7);
+    // Head
+    const headR = Math.abs(ls.x - rs.x) * 0.4;
+    const headPos = { x: nose.x, y: nose.y - headR * 0.3 };
+    drawCircle(ctx, headPos, headR, '#FFD93D');
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(headPos.x, headPos.y, headR, 0, Math.PI*2); ctx.stroke();
+    // Eyes
+    const eyeOff = headR * 0.3;
+    drawCircle(ctx, {x:headPos.x-eyeOff, y:headPos.y-headR*0.1}, headR*0.12, '#333');
+    drawCircle(ctx, {x:headPos.x+eyeOff, y:headPos.y-headR*0.1}, headR*0.12, '#333');
+    // Smile
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.beginPath();
+    ctx.arc(headPos.x, headPos.y+headR*0.1, headR*0.3, 0.1*Math.PI, 0.9*Math.PI); ctx.stroke();
+    // Hands
+    drawCircle(ctx, lw, 12, '#FFD93D');
+    drawCircle(ctx, rw, 12, '#FFD93D');
+}
+
+// ===== ROBOT =====
+function drawRobot(ctx, w, h, l) {
+    const nose = lm(l,0,w,h), ls = lm(l,11,w,h), rs = lm(l,12,w,h);
+    const le = lm(l,13,w,h), re = lm(l,14,w,h), lw = lm(l,15,w,h), rw = lm(l,16,w,h);
+    const lh = lm(l,23,w,h), rh = lm(l,24,w,h), lk = lm(l,25,w,h), rk = lm(l,26,w,h);
+    const la = lm(l,27,w,h), ra = lm(l,28,w,h);
+    const mid = { x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 };
+    const hip = { x:(lh.x+rh.x)/2, y:(lh.y+rh.y)/2 };
+    const bw = Math.abs(ls.x-rs.x);
+
+    // Body (rectangle)
+    ctx.fillStyle = '#778899'; ctx.strokeStyle = '#555'; ctx.lineWidth = 3;
+    ctx.fillRect(mid.x-bw*0.5, mid.y, bw, hip.y-mid.y);
+    ctx.strokeRect(mid.x-bw*0.5, mid.y, bw, hip.y-mid.y);
+    // Chest light
+    drawCircle(ctx, {x:mid.x, y:(mid.y+hip.y)/2}, bw*0.12, '#ff4444');
+    // Arms (thick rectangles)
+    drawLimb(ctx, ls, le, '#778899', 14); drawLimb(ctx, le, lw, '#778899', 12);
+    drawLimb(ctx, rs, re, '#778899', 14); drawLimb(ctx, re, rw, '#778899', 12);
+    // Claw hands
+    ctx.fillStyle = '#555';
+    ctx.fillRect(lw.x-10, lw.y-8, 20, 16); ctx.fillRect(rw.x-10, rw.y-8, 20, 16);
+    // Legs
+    drawLimb(ctx, lh, lk, '#556677', 12); drawLimb(ctx, lk, la, '#556677', 10);
+    drawLimb(ctx, rh, rk, '#556677', 12); drawLimb(ctx, rk, ra, '#556677', 10);
+    // Feet
+    ctx.fillStyle = '#444'; ctx.fillRect(la.x-14, la.y-5, 28, 14); ctx.fillRect(ra.x-14, ra.y-5, 28, 14);
+    // Head (square)
+    const headS = bw * 0.55;
+    const headPos = { x: nose.x, y: nose.y - headS*0.3 };
+    ctx.fillStyle = '#90A4AE'; ctx.fillRect(headPos.x-headS/2, headPos.y-headS/2, headS, headS);
+    ctx.strokeStyle = '#555'; ctx.strokeRect(headPos.x-headS/2, headPos.y-headS/2, headS, headS);
+    // Antenna
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(headPos.x, headPos.y-headS/2); ctx.lineTo(headPos.x, headPos.y-headS*0.8); ctx.stroke();
+    drawCircle(ctx, {x:headPos.x, y:headPos.y-headS*0.8}, 6, '#ff4444');
+    // Eyes (rectangles)
+    ctx.fillStyle = '#4FC3F7';
+    ctx.fillRect(headPos.x-headS*0.3, headPos.y-headS*0.1, headS*0.2, headS*0.15);
+    ctx.fillRect(headPos.x+headS*0.1, headPos.y-headS*0.1, headS*0.2, headS*0.15);
+    // Mouth
+    ctx.fillStyle = '#333'; ctx.fillRect(headPos.x-headS*0.2, headPos.y+headS*0.15, headS*0.4, headS*0.08);
+}
+
+// ===== DINOSAUR =====
+function drawDinosaur(ctx, w, h, l) {
+    const nose = lm(l,0,w,h), ls = lm(l,11,w,h), rs = lm(l,12,w,h);
+    const le = lm(l,13,w,h), re = lm(l,14,w,h), lw = lm(l,15,w,h), rw = lm(l,16,w,h);
+    const lh = lm(l,23,w,h), rh = lm(l,24,w,h), lk = lm(l,25,w,h), rk = lm(l,26,w,h);
+    const la = lm(l,27,w,h), ra = lm(l,28,w,h);
+    const mid = { x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 };
+    const hip = { x:(lh.x+rh.x)/2, y:(lh.y+rh.y)/2 };
+    const bw = Math.abs(ls.x-rs.x);
+
+    // Body (oval)
+    ctx.fillStyle = '#66BB6A'; ctx.beginPath();
+    ctx.ellipse(mid.x, (mid.y+hip.y)/2, bw*0.6, (hip.y-mid.y)*0.6, 0, 0, Math.PI*2); ctx.fill();
+    // Tail
+    ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(hip.x, hip.y); ctx.quadraticCurveTo(hip.x+bw*0.8, hip.y+20, hip.x+bw*1.1, hip.y-10); ctx.stroke();
+    // Spikes on back
+    ctx.fillStyle = '#FFA726';
+    for (let i=0; i<4; i++) {
+        const sx = mid.x - bw*0.2 + i*bw*0.2;
+        const sy = mid.y - 5 + i*((hip.y-mid.y)/4);
+        ctx.beginPath(); ctx.moveTo(sx-8, sy); ctx.lineTo(sx, sy-18); ctx.lineTo(sx+8, sy); ctx.fill();
+    }
+    // Arms (short stubby)
+    drawLimb(ctx, ls, le, '#66BB6A', 12); drawLimb(ctx, le, lw, '#66BB6A', 10);
+    drawLimb(ctx, rs, re, '#66BB6A', 12); drawLimb(ctx, re, rw, '#66BB6A', 10);
+    drawCircle(ctx, lw, 10, '#4CAF50'); drawCircle(ctx, rw, 10, '#4CAF50');
+    // Legs
+    drawLimb(ctx, lh, lk, '#4CAF50', 14); drawLimb(ctx, lk, la, '#4CAF50', 12);
+    drawLimb(ctx, rh, rk, '#4CAF50', 14); drawLimb(ctx, rk, ra, '#4CAF50', 12);
+    // Feet claws
+    drawCircle(ctx, la, 14, '#388E3C'); drawCircle(ctx, ra, 14, '#388E3C');
+    // Head
+    const headR = bw*0.4;
+    const headPos = { x:nose.x, y:nose.y-headR*0.2 };
+    ctx.fillStyle = '#66BB6A'; ctx.beginPath(); ctx.ellipse(headPos.x, headPos.y, headR, headR*0.85, 0, 0, Math.PI*2); ctx.fill();
+    // Eyes
+    drawCircle(ctx, {x:headPos.x-headR*0.35, y:headPos.y-headR*0.2}, headR*0.18, 'white');
+    drawCircle(ctx, {x:headPos.x+headR*0.35, y:headPos.y-headR*0.2}, headR*0.18, 'white');
+    drawCircle(ctx, {x:headPos.x-headR*0.35, y:headPos.y-headR*0.2}, headR*0.1, '#333');
+    drawCircle(ctx, {x:headPos.x+headR*0.35, y:headPos.y-headR*0.2}, headR*0.1, '#333');
+    // Mouth
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 2.5; ctx.beginPath();
+    ctx.arc(headPos.x, headPos.y+headR*0.2, headR*0.35, 0, Math.PI); ctx.stroke();
+}
+
+// ===== FISH =====
+function drawFish(ctx, w, h, l) {
+    const nose = lm(l,0,w,h), ls = lm(l,11,w,h), rs = lm(l,12,w,h);
+    const le = lm(l,13,w,h), re = lm(l,14,w,h), lw = lm(l,15,w,h), rw = lm(l,16,w,h);
+    const lh = lm(l,23,w,h), rh = lm(l,24,w,h);
+    const mid = { x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 };
+    const hip = { x:(lh.x+rh.x)/2, y:(lh.y+rh.y)/2 };
+    const bw = Math.abs(ls.x-rs.x);
+    const bodyH = hip.y - mid.y;
+
+    // Main body (big oval)
+    const cx = mid.x, cy = (mid.y+hip.y)/2;
+    ctx.fillStyle = '#FF7043'; ctx.beginPath();
+    ctx.ellipse(cx, cy, bw*0.7, bodyH*0.7, 0, 0, Math.PI*2); ctx.fill();
+    // Belly
+    ctx.fillStyle = '#FFCC80'; ctx.beginPath();
+    ctx.ellipse(cx, cy+bodyH*0.15, bw*0.45, bodyH*0.35, 0, 0, Math.PI*2); ctx.fill();
+    // Tail (follows hip direction)
+    ctx.fillStyle = '#FF5722'; ctx.beginPath();
+    ctx.moveTo(cx, hip.y+bodyH*0.2);
+    ctx.lineTo(cx-bw*0.4, hip.y+bodyH*0.6);
+    ctx.lineTo(cx+bw*0.4, hip.y+bodyH*0.6);
+    ctx.closePath(); ctx.fill();
+    // Fins (follow arms)
+    ctx.fillStyle = '#FF8A65';
+    // Left fin
+    ctx.beginPath(); ctx.moveTo(ls.x, ls.y); ctx.lineTo(lw.x, lw.y); ctx.lineTo(ls.x, ls.y+30); ctx.closePath(); ctx.fill();
+    // Right fin
+    ctx.beginPath(); ctx.moveTo(rs.x, rs.y); ctx.lineTo(rw.x, rw.y); ctx.lineTo(rs.x, rs.y+30); ctx.closePath(); ctx.fill();
+    // Top fin
+    ctx.fillStyle = '#E64A19'; ctx.beginPath();
+    ctx.moveTo(cx-15, mid.y-bodyH*0.3); ctx.lineTo(cx, mid.y-bodyH*0.65); ctx.lineTo(cx+15, mid.y-bodyH*0.3); ctx.closePath(); ctx.fill();
+    // Eyes
+    const headPos = { x:nose.x, y:nose.y };
+    drawCircle(ctx, {x:headPos.x-bw*0.2, y:headPos.y}, bw*0.13, 'white');
+    drawCircle(ctx, {x:headPos.x+bw*0.2, y:headPos.y}, bw*0.13, 'white');
+    drawCircle(ctx, {x:headPos.x-bw*0.2, y:headPos.y}, bw*0.07, '#333');
+    drawCircle(ctx, {x:headPos.x+bw*0.2, y:headPos.y}, bw*0.07, '#333');
+    // Mouth (O shape)
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.beginPath();
+    ctx.arc(headPos.x, headPos.y+bw*0.25, bw*0.1, 0, Math.PI*2); ctx.stroke();
+    // Bubbles
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    const t = Date.now()*0.002;
+    for (let i=0; i<3; i++) {
+        ctx.beginPath(); ctx.arc(headPos.x+bw*0.4, headPos.y-20-i*25+Math.sin(t+i)*8, 5+i*2, 0, Math.PI*2); ctx.fill();
+    }
+}
+
+// ===== CAT =====
+function drawCat(ctx, w, h, l) {
+    const nose = lm(l,0,w,h), ls = lm(l,11,w,h), rs = lm(l,12,w,h);
+    const le = lm(l,13,w,h), re = lm(l,14,w,h), lw = lm(l,15,w,h), rw = lm(l,16,w,h);
+    const lh = lm(l,23,w,h), rh = lm(l,24,w,h), lk = lm(l,25,w,h), rk = lm(l,26,w,h);
+    const la = lm(l,27,w,h), ra = lm(l,28,w,h);
+    const mid = { x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 };
+    const hip = { x:(lh.x+rh.x)/2, y:(lh.y+rh.y)/2 };
+    const bw = Math.abs(ls.x-rs.x);
+
+    // Body
+    ctx.fillStyle = '#FF9800'; ctx.beginPath();
+    ctx.ellipse(mid.x, (mid.y+hip.y)/2, bw*0.55, (hip.y-mid.y)*0.6, 0, 0, Math.PI*2); ctx.fill();
+    // Belly
+    ctx.fillStyle = '#FFF3E0'; ctx.beginPath();
+    ctx.ellipse(mid.x, (mid.y+hip.y)/2+10, bw*0.35, (hip.y-mid.y)*0.35, 0, 0, Math.PI*2); ctx.fill();
+    // Tail (curly)
+    ctx.strokeStyle = '#E65100'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(hip.x+bw*0.3, hip.y);
+    ctx.quadraticCurveTo(hip.x+bw*0.9, hip.y-30, hip.x+bw*0.7, hip.y-60); ctx.stroke();
+    // Arms/paws
+    drawLimb(ctx, ls, le, '#FF9800', 11); drawLimb(ctx, le, lw, '#FF9800', 9);
+    drawLimb(ctx, rs, re, '#FF9800', 11); drawLimb(ctx, re, rw, '#FF9800', 9);
+    drawCircle(ctx, lw, 11, '#FFF3E0'); drawCircle(ctx, rw, 11, '#FFF3E0');
+    // Legs
+    drawLimb(ctx, lh, lk, '#E65100', 12); drawLimb(ctx, lk, la, '#E65100', 10);
+    drawLimb(ctx, rh, rk, '#E65100', 12); drawLimb(ctx, rk, ra, '#E65100', 10);
+    drawCircle(ctx, la, 12, '#FFF3E0'); drawCircle(ctx, ra, 12, '#FFF3E0');
+    // Head
+    const headR = bw*0.42;
+    const headPos = { x:nose.x, y:nose.y-headR*0.15 };
+    ctx.fillStyle = '#FF9800'; ctx.beginPath(); ctx.arc(headPos.x, headPos.y, headR, 0, Math.PI*2); ctx.fill();
+    // Ears (triangles)
+    ctx.fillStyle = '#E65100';
+    ctx.beginPath(); ctx.moveTo(headPos.x-headR*0.7, headPos.y-headR*0.5); ctx.lineTo(headPos.x-headR*0.3, headPos.y-headR*1.1); ctx.lineTo(headPos.x-headR*0.1, headPos.y-headR*0.5); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(headPos.x+headR*0.1, headPos.y-headR*0.5); ctx.lineTo(headPos.x+headR*0.3, headPos.y-headR*1.1); ctx.lineTo(headPos.x+headR*0.7, headPos.y-headR*0.5); ctx.fill();
+    // Inner ears
+    ctx.fillStyle = '#FFAB91';
+    ctx.beginPath(); ctx.moveTo(headPos.x-headR*0.6, headPos.y-headR*0.55); ctx.lineTo(headPos.x-headR*0.35, headPos.y-headR*0.9); ctx.lineTo(headPos.x-headR*0.2, headPos.y-headR*0.55); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(headPos.x+headR*0.2, headPos.y-headR*0.55); ctx.lineTo(headPos.x+headR*0.35, headPos.y-headR*0.9); ctx.lineTo(headPos.x+headR*0.6, headPos.y-headR*0.55); ctx.fill();
+    // Eyes
+    drawCircle(ctx, {x:headPos.x-headR*0.3, y:headPos.y-headR*0.05}, headR*0.17, '#333');
+    drawCircle(ctx, {x:headPos.x+headR*0.3, y:headPos.y-headR*0.05}, headR*0.17, '#333');
+    drawCircle(ctx, {x:headPos.x-headR*0.28, y:headPos.y-headR*0.08}, headR*0.06, 'white');
+    drawCircle(ctx, {x:headPos.x+headR*0.32, y:headPos.y-headR*0.08}, headR*0.06, 'white');
+    // Nose & mouth
+    ctx.fillStyle = '#E91E63'; ctx.beginPath();
+    ctx.moveTo(headPos.x, headPos.y+headR*0.15); ctx.lineTo(headPos.x-6, headPos.y+headR*0.08); ctx.lineTo(headPos.x+6, headPos.y+headR*0.08); ctx.fill();
+    // Whiskers
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+    for (let s=-1; s<=1; s+=2) {
+        for (let i=-1; i<=1; i++) {
+            ctx.beginPath(); ctx.moveTo(headPos.x+s*headR*0.25, headPos.y+headR*0.15+i*6);
+            ctx.lineTo(headPos.x+s*headR*0.75, headPos.y+headR*0.1+i*10); ctx.stroke();
+        }
+    }
+}
+
+// ===== ALIEN =====
+function drawAlien(ctx, w, h, l) {
+    const nose = lm(l,0,w,h), ls = lm(l,11,w,h), rs = lm(l,12,w,h);
+    const le = lm(l,13,w,h), re = lm(l,14,w,h), lw = lm(l,15,w,h), rw = lm(l,16,w,h);
+    const lh = lm(l,23,w,h), rh = lm(l,24,w,h), lk = lm(l,25,w,h), rk = lm(l,26,w,h);
+    const la = lm(l,27,w,h), ra = lm(l,28,w,h);
+    const mid = { x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 };
+    const hip = { x:(lh.x+rh.x)/2, y:(lh.y+rh.y)/2 };
+    const bw = Math.abs(ls.x-rs.x);
+
+    // Body (slim oval)
+    ctx.fillStyle = '#B39DDB'; ctx.beginPath();
+    ctx.ellipse(mid.x, (mid.y+hip.y)/2, bw*0.45, (hip.y-mid.y)*0.6, 0, 0, Math.PI*2); ctx.fill();
+    // Glowing belt
+    ctx.strokeStyle = '#76FF03'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(mid.x, (mid.y+hip.y)/2+5, bw*0.46, 8, 0, 0, Math.PI*2); ctx.stroke();
+    // Arms (thin tentacle-like)
+    ctx.strokeStyle = '#9575CD'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(ls.x, ls.y); ctx.quadraticCurveTo(le.x-15, le.y, lw.x, lw.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rs.x, rs.y); ctx.quadraticCurveTo(re.x+15, re.y, rw.x, rw.y); ctx.stroke();
+    // Three fingers each hand
+    for (let i=-1; i<=1; i++) {
+        drawCircle(ctx, {x:lw.x+i*8, y:lw.y+5}, 5, '#CE93D8');
+        drawCircle(ctx, {x:rw.x+i*8, y:rw.y+5}, 5, '#CE93D8');
+    }
+    // Legs (thin)
+    drawLimb(ctx, lh, lk, '#7E57C2', 9); drawLimb(ctx, lk, la, '#7E57C2', 7);
+    drawLimb(ctx, rh, rk, '#7E57C2', 9); drawLimb(ctx, rk, ra, '#7E57C2', 7);
+    // Feet (oval)
+    ctx.fillStyle = '#5E35B1';
+    ctx.beginPath(); ctx.ellipse(la.x, la.y+5, 16, 8, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ra.x, ra.y+5, 16, 8, 0, 0, Math.PI*2); ctx.fill();
+    // Head (big inverted egg)
+    const headR = bw*0.55;
+    const headPos = { x:nose.x, y:nose.y-headR*0.2 };
+    ctx.fillStyle = '#B39DDB'; ctx.beginPath();
+    ctx.ellipse(headPos.x, headPos.y, headR*0.8, headR, 0, 0, Math.PI*2); ctx.fill();
+    // Big eyes
+    ctx.fillStyle = '#000'; ctx.beginPath();
+    ctx.ellipse(headPos.x-headR*0.3, headPos.y, headR*0.25, headR*0.35, -0.1, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(headPos.x+headR*0.3, headPos.y, headR*0.25, headR*0.35, 0.1, 0, Math.PI*2); ctx.fill();
+    // Eye shine
+    drawCircle(ctx, {x:headPos.x-headR*0.22, y:headPos.y-headR*0.12}, headR*0.08, '#76FF03');
+    drawCircle(ctx, {x:headPos.x+headR*0.38, y:headPos.y-headR*0.12}, headR*0.08, '#76FF03');
+    // Tiny mouth
+    ctx.strokeStyle = '#7E57C2'; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.arc(headPos.x, headPos.y+headR*0.5, headR*0.12, 0.1*Math.PI, 0.9*Math.PI); ctx.stroke();
+    // Antenna
+    ctx.strokeStyle = '#9575CD'; ctx.lineWidth = 3;
+    const t = Date.now()*0.003;
+    ctx.beginPath(); ctx.moveTo(headPos.x, headPos.y-headR); ctx.quadraticCurveTo(headPos.x+Math.sin(t)*15, headPos.y-headR*1.4, headPos.x+Math.sin(t)*10, headPos.y-headR*1.5); ctx.stroke();
+    drawCircle(ctx, {x:headPos.x+Math.sin(t)*10, y:headPos.y-headR*1.5}, 7, '#76FF03');
+}
+
+</script>
+</body>
+</html>
